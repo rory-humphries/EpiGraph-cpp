@@ -39,14 +39,17 @@ for filename in range(1, len(files)):
     i.append(sum(df.I))
     r.append(sum(df.R))
     x.append(sum(df.X))
+    
 plt.plot(s, label = 'S')
 plt.plot(i, label = 'I')
 plt.plot(r, label = 'R')
 plt.plot(x, label = 'X')
+
 plt.title('Evolution of the SIRX model')
 plt.ylabel('Number of individuals')
 plt.xlabel('Time')
 plt.savefig('evolution.png', bbox_inches='tight')
+
 
 for filename in range(1, len(files)):
     df = pd.read_csv("./output/"+str(filename)+".csv")
@@ -60,8 +63,7 @@ for filename in range(1, len(files)):
     plt.imshow(base, cmap = plt.get_cmap('inferno'),alpha = 0.7,interpolation="nearest",origin='lower')
 
     plt.imshow(pic[::-1], alpha = 1,  cmap = plt.get_cmap('inferno'), aspect="equal",interpolation="nearest", vmin = 1, vmax = 1000)
-    #norm=matplotlib.colors.LogNorm() plt.scatter(df["East"],df["North"], marker = ".",s=1,c = df.I, , cmap = plt.get_cmap('inferno'))
-    #norm=colors.LogNorm(),
+
     plt.title("Day " + str(filename))
     plt.colorbar().set_label("% of Infected Population per Square Kilometre")
     
@@ -69,8 +71,6 @@ for filename in range(1, len(files)):
     plt.savefig("./to_gif/"+ str(filename), bbox_inches='tight')
     #plt.show()
     plt.close()
-    
-
     
     
 files = []

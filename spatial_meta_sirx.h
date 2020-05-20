@@ -40,9 +40,9 @@ auto add_edges_gravity_model(SpatialGraph &g, std::map<Vertex, vdata>& vmap, std
      */
 
     int num_travels = 0;
-    std::uniform_real_distribution<> uni_dist(0, 1);
+    std::uniform_real_distribution<> uni_dist(0, 2.6);
     std::uniform_int_distribution<> uni_int_dist(0, g.num_vertices());
-    power_law distance_dist(d_alpha, 1);
+    power_law distance_dist(d_alpha, 2.6);
 
     double M, u, d, ang;
     Vertex v_src, v_dst;
@@ -62,7 +62,8 @@ auto add_edges_gravity_model(SpatialGraph &g, std::map<Vertex, vdata>& vmap, std
                 double new_y = g.y_pos(v_src) + d * sin(2 * 3.14 * ang);
                 v_dst = g.closest_vertex(new_x, new_y);
 
-                if (pow(new_x - g.x_pos(v_dst), 2) + pow(new_y - g.y_pos(v_dst), 2) > 1 || v_src == v_dst) {
+                //if (pow(new_x - g.x_pos(v_dst), 2) + pow(new_y - g.y_pos(v_dst), 2) > 1 || v_src == v_dst)
+                if (pow(new_x - g.x_pos(v_dst), 2) + pow(new_y - g.y_pos(v_dst), 2) > 10 || v_src == v_dst) {
                     continue;
                 }
                 M = (double)vmap[v_src].N / (double) vmap[v_dst].N;

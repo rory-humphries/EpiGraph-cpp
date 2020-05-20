@@ -33,7 +33,7 @@ int main() {
     std::map<Vertex, vdata> vmap; // holds vertex data
     std::map<Edge, edata> emap; // holds edge data
     SpatialGraph g;
-    build_from_csv(g, vmap, emap, "../data/pop_data.csv");
+    build_from_csv(g, vmap, emap, "../data/ed_pop_data.csv");
 
     std::cout << "Simulating SIR-X model with parameters\n" << "μ = " << mu << "\nβ = " <<
               beta << "\nκ = " << kappa(0) << "\n\n";
