@@ -12,21 +12,25 @@
 
 struct vdata {
     std::vector<int> waiting_times;
-    double S;
-    double I;
-    double R;
-    double X;
+    double S; // susceptible
+    double I; // infected
+    double R; // recovered
+    double D; // dead
+    double X; // quarantined
 
     double N;
+
 
 };
 struct edata {
     double S;
     double I;
     double R;
+    double D;
     double X;
 
     double N;
+    int commuters;
 };
 
 auto add_edges_gravity_model(SpatialGraph &g, std::map<Vertex, vdata>& vmap, std::map<Edge, edata>& emap, double d_alpha) -> void {
@@ -96,6 +100,33 @@ auto add_edges_gravity_model(SpatialGraph &g, std::map<Vertex, vdata>& vmap, std
     std::cout << "Number of travels = " << num_travels << std::endl;
 }
 
+auto add_edges_commuters(SpatialGraph &g, std::map<Vertex, vdata>& vmap, std::map<Edge, edata>& emap, double max_dist, double compliance) -> void {
+
+    Vertex v_src, v_dst;
+    for (v_src = 0; v_src < g.num_vertices(); v_src++) {
+        auto it_pair = g.out_edges(v_src);
+        for(; it_pair.first!=it_pair.second; it_pair.first++) {
+            auto e = *it_pair.first; // edge
+            if (g.long_lat_distance(v_src, e.dst)/1000 >= max_dist) {
+                emap[e].N = (int)(1-compliance)*emap[e].commuters;
+                vmap[v_src].N -= emap[e].N;
+                emap[e].S = vmap[v_src].S;
+                emap[e].I = vmap[v_src].I;
+                emap[e].R = vmap[v_src].R;
+                emap[e].X = vmap[v_src].X;
+            }
+            else {
+                emap[e].N = emap[e].commuters;
+                vmap[v_src].N -= emap[e].commuters;
+                emap[e].S = vmap[v_src].S;
+                emap[e].I = vmap[v_src].I;
+                emap[e].R = vmap[v_src].R;
+                emap[e].X = vmap[v_src].X;
+            }
+        }
+    }
+}
+
 auto reset_movements(SpatialGraph &g, std::map<Vertex, vdata>& vmap, std::map<Edge, edata>& emap) -> void {
     /*
      * Send everyone back to home vertex, delete all edges and edge data.
@@ -117,6 +148,8 @@ auto reset_movements(SpatialGraph &g, std::map<Vertex, vdata>& vmap, std::map<Ed
             summed_X += emap[e].X * emap[e].N;
             summed_N += emap[e].N;
 
+            //emap[e].N = 0;
+
         }
         vmap[v].S = summed_S/summed_N;
         vmap[v].I = summed_I/summed_N;
@@ -124,8 +157,8 @@ auto reset_movements(SpatialGraph &g, std::map<Vertex, vdata>& vmap, std::map<Ed
         vmap[v].X = summed_X/summed_N;
         vmap[v].N = summed_N;
     }
-    g.remove_all_edges();
-    emap.clear();
+    //g.remove_all_edges();
+    //emap.clear();
 }
 
 auto add_infected(SpatialGraph& g, std::map<Vertex, vdata>& vmap, double x, double y) -> void{
@@ -139,7 +172,7 @@ auto add_infected(SpatialGraph& g, std::map<Vertex, vdata>& vmap, double x, doub
 
 }
 
-auto gen_interactions(SpatialGraph &g, std::map<Vertex, vdata>& vmap, std::map<Edge, edata>& emap, double beta, double mu, double kappa) -> void{
+auto gen_interactions(SpatialGraph &g, std::map<Vertex, vdata>& vmap, std::map<Edge, edata>& emap, double beta, double mu, double kappa, double alpha) -> void{
     for (int v = 0; v < g.num_vertices(); v++) {
         auto it_pair = g.in_edges(v);
         double summed_I = vmap[v].I*vmap[v].N;
@@ -155,13 +188,15 @@ auto gen_interactions(SpatialGraph &g, std::map<Vertex, vdata>& vmap, std::map<E
             continue;
         }
         double S_delta = -beta*vmap[v].S*summed_I/summed_N;
-        double I_delta = beta*vmap[v].S*summed_I/summed_N - kappa*vmap[v].I - mu*vmap[v].I;
-        double R_delta = mu*vmap[v].I + mu*vmap[v].X;
-        double X_delta = kappa*vmap[v].I - mu*vmap[v].X;
+        double I_delta = beta*vmap[v].S*summed_I/summed_N - kappa*vmap[v].I - mu*vmap[v].I - alpha*vmap[v].I;
+        double R_delta = mu*vmap[v].I + mu*vmap[v].X ;
+        double D_delta = alpha*vmap[v].I + alpha*vmap[v].X;
+        double X_delta = kappa*vmap[v].I - mu*vmap[v].X - alpha*vmap[v].X;
 
         vmap[v].S += S_delta;
         vmap[v].I += I_delta;
         vmap[v].R += R_delta;
+        vmap[v].D += D_delta;
         vmap[v].X += X_delta;
 
         it_pair = g.in_edges(v);
@@ -169,13 +204,15 @@ auto gen_interactions(SpatialGraph &g, std::map<Vertex, vdata>& vmap, std::map<E
             auto e = *it_pair.first; // edge
 
             S_delta = -beta*emap[e].S*summed_I/summed_N;
-            I_delta = beta*emap[e].S*summed_I/summed_N - kappa*emap[e].I - mu*emap[e].I;
+            I_delta = beta*emap[e].S*summed_I/summed_N - kappa*emap[e].I - mu*emap[e].I - alpha*emap[e].I;
             R_delta = mu*emap[e].I + mu*emap[e].X;
-            X_delta = kappa*emap[e].I - mu*emap[e].X;
+            D_delta = alpha*emap[e].I + alpha*emap[e].X;
+            X_delta = kappa*emap[e].I - mu*emap[e].X - alpha*emap[e].X;
 
             emap[e].S += S_delta;
             emap[e].I += I_delta;
             emap[e].R += R_delta;
+            emap[e].D += D_delta;
             emap[e].X += X_delta;
         }
     }
@@ -202,6 +239,7 @@ auto print_status(SpatialGraph &g, std::map<Vertex, vdata>& vmap) {
     double summed_S = 0;
     double summed_I = 0;
     double summed_R = 0;
+    double summed_D = 0;
     double summed_X = 0;
     double summed_N = 0;
     for (int v = 0; v < g.num_vertices(); v++) {
@@ -209,10 +247,11 @@ auto print_status(SpatialGraph &g, std::map<Vertex, vdata>& vmap) {
         summed_S += vmap[v].S * vmap[v].N;
         summed_I += vmap[v].I * vmap[v].N;
         summed_R += vmap[v].R * vmap[v].N;
+        summed_D += vmap[v].D * vmap[v].N;
         summed_X += vmap[v].X * vmap[v].N;
         summed_N += vmap[v].N;
     }
-    std::cout << "S = " << summed_S << ", I = " << summed_I << ", R = " << summed_R << ", X = " << summed_X << ", N = " << summed_N << "\n";
+    std::cout << "S = " << summed_S << ", I = " << summed_I << ", R = " << summed_R << ", X = " << summed_X << ", D = " << summed_D << ", N = " << summed_N << "\n";
 }
 
 void to_csv(SpatialGraph& g, std::map<Vertex, vdata>& vmap, std::map<Edge, edata>, const std::string& id, std::string dir)
@@ -228,6 +267,7 @@ void to_csv(SpatialGraph& g, std::map<Vertex, vdata>& vmap, std::map<Edge, edata
     myfile << "S,";
     myfile << "I,";
     myfile << "R,";
+    myfile << "D,";
     myfile << "X,";
     myfile << "N\n";
 
@@ -238,6 +278,7 @@ void to_csv(SpatialGraph& g, std::map<Vertex, vdata>& vmap, std::map<Edge, edata
         myfile << vmap[v].S*vmap[v].N <<",";
         myfile << vmap[v].I*vmap[v].N <<",";
         myfile << vmap[v].R*vmap[v].N <<",";
+        myfile << vmap[v].D*vmap[v].N <<",";
         myfile << vmap[v].X*vmap[v].N <<",";
         myfile << vmap[v].N <<"\n";
     }

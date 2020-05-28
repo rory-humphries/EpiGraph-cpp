@@ -18,6 +18,7 @@
 #include <vector>
 #include <algorithm>
 #include <chrono>
+const double pi = 3.14;
 
 
 namespace bg = boost::geometry;
@@ -274,7 +275,27 @@ public:
          */
         return bg::distance(m_positions[v1], m_positions[v2]);
     }
+    auto long_lat_distance(Vertex v1, Vertex v2) -> double {
 
+        double lat1 = m_positions[v1].y();
+        double lon1 = m_positions[v1].x();
+        double lat2 = m_positions[v2].y();
+        double lon2 = m_positions[v2].x();
+
+        double R = 6371e3; // metres
+        double phi1 = lat1 * pi / 180.0; // φ, λ in radians
+        double phi2 = lat2 * pi / 180.0;
+        double delphi = (lat2 - lat1) * pi / 180.0;
+        double dellam = (lon2 - lon1) * pi / 180.0;
+
+        double a = sin(delphi / 2) * sin(delphi / 2) +
+                  cos(phi1) * cos(phi2) *
+                  sin(dellam / 2) * sin(dellam / 2);
+        double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+
+        double d = R * c; // in metres
+        return d;
+    }
     template<typename OutputIter>
     auto vertices_at_dist(Vertex v, double radius, double err, OutputIter result) -> OutputIter {
         /*

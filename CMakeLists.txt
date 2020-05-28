@@ -3,4 +3,4 @@ project(EpiGraph)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(EpiGraph SIRX_ireland.cpp edge.h spatial_graph.h distributions.h algos.h)
+add_executable(EpiGraph SIRX_ed.cpp edge.h spatial_graph.h distributions.h algos.h)
