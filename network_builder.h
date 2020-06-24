@@ -1,0 +1,8 @@
+//
+// Created by roryh on 23/06/2020.
+//
+
+#ifndef EPIGRAPH_NETWORK_BUILDER_H
+#define EPIGRAPH_NETWORK_BUILDER_H
+
+#endif //EPIGRAPH_NETWORK_BUILDER_H

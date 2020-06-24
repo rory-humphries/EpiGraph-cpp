@@ -69,7 +69,7 @@ for filename in range(1, len(files)):
     gdf['I'].loc[df.index] = df.I.to_numpy()
     
     #lognorm = matplotlib.colors.LogNorm(1, max(1, df.I.max()))
-    lognorm = matplotlib.colors.LogNorm(1, maxi)
+    lognorm = matplotlib.colors.Normalize(1, maxi)
 
 
     ax2=gdf.plot(ax=ax, linewidth=0.0001, column = 'I', norm=lognorm, legend = False)
@@ -83,7 +83,33 @@ for filename in range(1, len(files)):
     plt.axis('off')
     plt.axis('equal')
     plt.tight_layout()
-    plt.savefig('tmp.png')
+    plt.savefig(filename+'tmp.png')
     images.append(imageio.imread("tmp.png"))
     plt.show()
 imageio.mimsave('output.gif', images)
+
+fig, ax = plt.subplots(1, 1, figsize = (10,10))
+df = pd.read_csv("../output/"+str(50)+".csv")
+df.index = ed_info.index
+df = df.rename(index = new_index)
+
+gdf['I'] = 0.1
+gdf['I'].loc[df.index] = df.I.to_numpy()
+
+#lognorm = matplotlib.colors.LogNorm(1, max(1, df.I.max()))
+lognorm = matplotlib.colors.Normalize(1, maxi)
+
+
+ax2=gdf.plot(ax=ax, linewidth=0.0001, column = 'I', norm=lognorm, legend = False)
+patches = ax2.collections[0]
+cbar = plt.colorbar(patches, ax=ax2, extend='max')
+cbar.ax.set_ylabel('No. of infected', fontsize = 15)
+cbar.ax.tick_params(labelsize=15) 
+
+
+plt.title('Day ' + str(filename), fontsize = 15)
+plt.axis('off')
+plt.axis('equal')
+plt.tight_layout()
+plt.savefig(filename+'tmp.png')
+plt.show()

@@ -11,14 +11,9 @@
 #include <sstream>
 
 // not thread safe, careful with openMP
-std::mt19937 &global_engine() {
-    static std::random_device rd{};
-    static std::mt19937 gen(rd());
-    //static std::default_random_engine e{};
-    return gen;
-}
+std::mt19937 &global_engine();
 
-class power_law{
+class PowerLaw{
     /*
      * Models a power law distribution.
      */
@@ -29,7 +24,7 @@ public:
     double m_xmin;
     double m_xmax;
 
-    power_law(double alpha, double xmin): m_alpha(alpha), m_xmin(xmin),  uni_dist(0.0, 1.0) {}
+    PowerLaw(double alpha, double xmin): m_alpha(alpha), m_xmin(xmin), uni_dist(0.0, 1.0) {}
 
     static double pdf(double x, double alpha, double x_min)
     {
@@ -66,59 +61,68 @@ public:
     }
 };
 
-struct prob_dist
+
+struct ProbDist
 {
-    std::vector<double> cumulative_dist;
-    std::vector<double> values;
+    std::discrete_distribution<> index_dist;
+    std::vector<double> vals;
+
     std::uniform_real_distribution<double> uni01_distribution;
 
-    prob_dist()= default;
-    explicit prob_dist(std::string csv)
-    {
+    ProbDist() {}
 
-        std::uniform_real_distribution<double> uni01_distribution_tmp(0.0,1.0);
-        uni01_distribution = uni01_distribution_tmp;
-
-        double sum = 0;
-
-        std::ifstream myfile;
-        std::string line;
-        myfile.open(csv);
-
-        if (myfile.is_open())
-        {
-            getline(myfile, line);
-
-            while (getline(myfile, line))
-            {
-                std::istringstream s(line);
-                std::string field;
-
-                while (getline(s, field, ','))
-                {
-                    sum += stod(field);
-                    cumulative_dist.push_back(sum);
-
-                    getline(s, field, ',');
-                    values.push_back(stod(field));
-                }
-            }
+    template<typename Iter1, typename Iter2>
+    ProbDist(Iter1 val_begin, Iter1 val_end, Iter2 prob_begin, Iter2 prob_end) {
+        for (;val_begin != val_end; val_begin++) {
+            vals.push_back(*val_begin);
         }
+        std::vector<double> probs;
+        for (;prob_begin != prob_end; prob_begin++) {
+            probs.push_back(*val_begin);
+        }
+        if (vals.size()!=probs.size()) {
+            throw std::invalid_argument("Iterators length don't match");
+        }
+        std::discrete_distribution<> tmp_dist(probs.begin(), probs.end());
+        index_dist = tmp_dist;
     }
+
 
     template<typename RandomGenerator>
     double operator()( RandomGenerator& gen) {
 
-        double r = uni01_distribution(gen);
-        for (int i = 0; i < cumulative_dist.size(); i++)
-        {
-            if (r < cumulative_dist[i])
-            {
-                return values[i];
-            }
-        }
-        return r;
+        return vals[index_dist(gen)];
     }
 };
+
+auto ProbDist_from_csv(std::string csv) -> ProbDist {
+
+    std::ifstream myfile;
+    std::string line;
+    myfile.open(csv);
+
+    std::vector<double> vals;
+    std::vector<double> probs;
+
+    if (myfile.is_open())
+    {
+        getline(myfile, line);
+
+        while (getline(myfile, line))
+        {
+            std::istringstream s(line);
+            std::string field;
+
+            getline(s, field, ',');
+            vals.push_back(stod(field));
+
+            getline(s, field, ',');
+            probs.push_back(stod(field));
+
+        }
+    }
+
+    return ProbDist(vals.begin(), vals.end(), probs.begin(), probs.end());
+}
 
 #endif //EPIGRAPH_DISTRIBUTIONS_H

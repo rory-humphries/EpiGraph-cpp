@@ -9,10 +9,21 @@ Created on Wed May 27 09:02:56 2020
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import matplotlib.cbook as cbook
+
+import datetime
+
+
 import os
 import geopandas as gpd
 from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
-#import imageio
+
+######################
+save_figs = True
+op_name = 'dynamic_lock_10_3'
+annotate_events = False
+#####################
 
 
 files = []
@@ -32,7 +43,7 @@ maxi = 0
 maxr = 0
 maxd = 0
 maxx = 0
-for filename in range(1, len(files)):
+for filename in range(0, len(files)):
     df = pd.read_csv("../output/"+str(filename)+".csv")
     maxs = max(maxs, max(df.S))
     maxi = max(maxi, max(df.I))
@@ -45,129 +56,145 @@ for filename in range(1, len(files)):
     d.append(sum(df.D))
     x.append(sum(df.X))
     
-plt.plot(s, label = 'S')
-plt.plot(i, label = 'I')
-plt.plot(r, label = 'R')
-plt.plot(d, label = 'D')
-plt.plot(x, label = 'X')
+years = mdates.YearLocator()   # every year
+months = mdates.MonthLocator()  # every month
+years_fmt = mdates.DateFormatter('%Y')
+months_fmt = mdates.DateFormatter('%m')
+
+dates = [datetime.datetime(2020, 1, 22) + datetime.timedelta(days=x) for x in range(len(files))]
+
+#fig, ax = plt.subplots(1, 1, figsize = (16/3, 9/3))
+fig, ax = plt.subplots(1, 1)
+plt.plot(dates, s, label = 'S', c = 'tab:purple')
+plt.plot(dates, i, label = 'I', c = 'tab:blue')
+plt.plot(dates, r, label = 'R', c = 'tab:orange')
+plt.plot(dates, d, label = 'D', c = 'tab:red')
+plt.plot(dates, x, label = 'X', c = 'tab:green')
+
+ax.xaxis.set_major_locator(years)
+ax.xaxis.set_major_formatter(years_fmt)
+ax.xaxis.set_minor_locator(months)
+ax.xaxis.set_minor_formatter(months_fmt)
+ax.tick_params(which='major', length=16)
+plt.setp(ax.xaxis.get_minorticklabels(), rotation=45)
+#plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
+
+#plt.xlabel('time (months)')
+plt.ylabel('No. of individuals')
 
 plt.ylim(1, 7000000)
 plt.yscale('log')
 plt.legend()
 
-#plt.annotate('local max', xy=(0.05, 0),  xycoords='axes fraction',
-#            xytext=(0.05, -0.2), textcoords='axes fraction',
-#            arrowprops=dict(facecolor='black', shrink=0.0005),
-#           horizontalalignment='right', verticalalignment='top',
-#            )
-"""
-fs = 8
-plt.annotate('Initial Lockdown', xy=(50, 1),  xycoords='data',
-            xytext=(50, 0.1), textcoords='data',
-            arrowprops=dict(facecolor='black', shrink=0.0005, width = 0.1, 
-                            headlength = 5, headwidth = 5),
-            horizontalalignment='right', verticalalignment='top',
-            fontsize = fs)
-plt.annotate('Phase 1', xy=(117, 1),  xycoords='data',
-            xytext=(117, 0.2), textcoords='data',
-            arrowprops=dict(facecolor='black', shrink=0.0005, width = 0.1, 
-                            headlength = 5, headwidth = 5),
-            horizontalalignment='right', verticalalignment='top',
-            fontsize = fs)
-plt.annotate('Phase 2', xy=(138, 1),  xycoords='data',
-            xytext=(138, 0.1), textcoords='data',
-            arrowprops=dict(facecolor='black', shrink=0.0005, width = 0.1, 
-                            headlength = 5, headwidth = 5),
-            horizontalalignment='right', verticalalignment='top',
-            fontsize = fs)
-plt.annotate('Phase 3', xy=(159, 1),  xycoords='data',
-            xytext=(159, 0.05), textcoords='data',
-            arrowprops=dict(facecolor='black', shrink=0.0005, width = 0.1, 
-                            headlength = 5, headwidth = 5),
-            horizontalalignment='center', verticalalignment='top',
-            fontsize = fs)
-plt.annotate('Phase 4', xy=(180, 1),  xycoords='data',
-            xytext=(180, 0.1), textcoords='data',
-            arrowprops=dict(facecolor='black', shrink=0.0005, width = 0.1, 
-                            headlength = 5, headwidth = 5),
-            horizontalalignment='left', verticalalignment='top',
-            fontsize = fs)
-plt.annotate('Phase 5', xy=(201, 1),  xycoords='data',
-            xytext=(201, 0.2), textcoords='data',
-            arrowprops=dict(facecolor='black', shrink=0.0005, width = 0.1, 
-                            headlength = 5, headwidth = 5),
-            horizontalalignment='left', verticalalignment='top',
-            fontsize = fs)
-"""
-plt.ylabel('No. of individuals')
-plt.savefig('no_lockdown_log_scale.png', bbox_inches='tight', dpi = 300)
 
-fig, ax = plt.subplots()
-plt.plot(i, label = 'I')
-plt.plot(d, label = 'D')
-plt.plot(x, label = 'X')
+if annotate_events == True:
+    fs = 8
+    diff = 0.4
+    p1 = 0.05
+    p2 = 0.15
+    plt.annotate('Initial Lockdown', xy=(datetime.datetime(2020, 3, 12), 1),  xycoords='data',
+                xytext=(datetime.datetime(2020, 3, 12), p1), textcoords='data',
+                arrowprops=dict(facecolor='black', shrink=0.0005, width = 0.1, 
+                                headlength = 5, headwidth = 5),
+                horizontalalignment='right', verticalalignment='top',
+                fontsize = fs)
+    plt.annotate('Phase 1', xy=(datetime.datetime(2020, 5, 18), 1),  xycoords='data',
+                xytext=(datetime.datetime(2020, 5, 18), p2), textcoords='data',
+                arrowprops=dict(facecolor='black', shrink=0.0005, width = 0.1, 
+                                headlength = 5, headwidth = 5),
+                horizontalalignment='right', verticalalignment='top',
+                fontsize = fs)
+    plt.annotate('Phase 2', xy=(datetime.datetime(2020, 6, 8), 1),  xycoords='data',
+                xytext=(datetime.datetime(2020, 6, 8), p2*diff), textcoords='data',
+                arrowprops=dict(facecolor='black', shrink=0.0005, width = 0.1, 
+                                headlength = 5, headwidth = 5),
+                horizontalalignment='right', verticalalignment='top',
+                fontsize = fs)
+    plt.annotate('Phase 3', xy=(datetime.datetime(2020, 6, 29), 1),  xycoords='data',
+                xytext=(datetime.datetime(2020, 6, 29), p2*diff*diff), textcoords='data',
+                arrowprops=dict(facecolor='black', shrink=0.0005, width = 0.1, 
+                                headlength = 5, headwidth = 5),
+                horizontalalignment='center', verticalalignment='top',
+                fontsize = fs)
+    plt.annotate('Phase 4', xy=(datetime.datetime(2020, 7, 20), 1),  xycoords='data',
+                xytext=(datetime.datetime(2020, 7, 20),  p2*diff), textcoords='data',
+                arrowprops=dict(facecolor='black', shrink=0.0005, width = 0.1, 
+                                headlength = 5, headwidth = 5),
+                horizontalalignment='left', verticalalignment='top',
+                fontsize = fs)
+    plt.annotate('Phase 5', xy=(datetime.datetime(2020, 8, 10), 1),  xycoords='data',
+                xytext=(datetime.datetime(2020, 8, 10), p2), textcoords='data',
+                arrowprops=dict(facecolor='black', shrink=0.0005, width = 0.1, 
+                                headlength = 5, headwidth = 5),
+                horizontalalignment='left', verticalalignment='top',
+                fontsize = fs)
+
+if save_figs == True:
+    plt.savefig(op_name + '_log_scale.png', bbox_inches='tight', dpi = 300)
+
+
+#fig, ax = plt.subplots(1, 1, figsize = (16/3, 9/3))
+fig, ax = plt.subplots(1, 1)
+plt.plot(dates, i, label = 'I', c = 'tab:blue')
+plt.plot(dates, d, label = 'D', c = 'tab:red')
+plt.plot(dates, x, label = 'X', c = 'tab:green')
 plt.legend()
 
-"""
-fs = 8
-plt.annotate('Initial Lockdown', xy=(50, 0),  xycoords='data',
-            xytext=(50, -100000), textcoords='data',
-            arrowprops=dict(facecolor='black', shrink=0.0005, width = 0.1, 
-                            headlength = 5, headwidth = 5),
-            horizontalalignment='right', verticalalignment='top',
-            fontsize = fs)
-plt.annotate('Phase 1', xy=(117, 0),  xycoords='data',
-            xytext=(117, -100000), textcoords='data',
-            arrowprops=dict(facecolor='black', shrink=0.0005, width = 0.1, 
-                            headlength = 5, headwidth = 5),
-            horizontalalignment='right', verticalalignment='top',
-            fontsize = fs)
-plt.annotate('Phase 2', xy=(138, 0),  xycoords='data',
-            xytext=(138, -140000), textcoords='data',
-            arrowprops=dict(facecolor='black', shrink=0.0005, width = 0.1, 
-                            headlength = 5, headwidth = 5),
-            horizontalalignment='right', verticalalignment='top',
-            fontsize = fs)
-plt.annotate('Phase 3', xy=(159, 0),  xycoords='data',
-            xytext=(159, -180000), textcoords='data',
-            arrowprops=dict(facecolor='black', shrink=0.0005, width = 0.1, 
-                            headlength = 5, headwidth = 5),
-            horizontalalignment='center', verticalalignment='top',
-            fontsize = fs)
-plt.annotate('Phase 4', xy=(180, 0),  xycoords='data',
-            xytext=(180, -140000), textcoords='data',
-            arrowprops=dict(facecolor='black', shrink=0.0005, width = 0.1, 
-                            headlength = 5, headwidth = 5),
-            horizontalalignment='left', verticalalignment='top',
-            fontsize = fs)
-plt.annotate('Phase 5', xy=(201, 0),  xycoords='data',
-            xytext=(201, -100000), textcoords='data',
-            arrowprops=dict(facecolor='black', shrink=0.0005, width = 0.1, 
-                            headlength = 5, headwidth = 5),
-            horizontalalignment='left', verticalalignment='top',
-            fontsize = fs)
-"""
+if annotate_events == True:
+    fs = 8
+    diff = -25000
+    p1 = -120000
+    p2 = -100000
+    fs = 8
+    plt.annotate('Initial Lockdown', xy=(datetime.datetime(2020, 3, 12), 0),  xycoords='data',
+                xytext=(datetime.datetime(2020, 3, 12), p1), textcoords='data',
+                arrowprops=dict(facecolor='black', shrink=0.0005, width = 0.1, 
+                                headlength = 5, headwidth = 5),
+                horizontalalignment='right', verticalalignment='top',
+                fontsize = fs)
+    plt.annotate('Phase 1', xy=(datetime.datetime(2020, 5, 18), 0),  xycoords='data',
+                xytext=(datetime.datetime(2020, 5, 18), p2), textcoords='data',
+                arrowprops=dict(facecolor='black', shrink=0.0005, width = 0.1, 
+                                headlength = 5, headwidth = 5),
+                horizontalalignment='right', verticalalignment='top',
+                fontsize = fs)
+    plt.annotate('Phase 2', xy=(datetime.datetime(2020, 6, 8), 0),  xycoords='data',
+                xytext=(datetime.datetime(2020, 6, 8), p2+diff), textcoords='data',
+                arrowprops=dict(facecolor='black', shrink=0.0005, width = 0.1, 
+                                headlength = 5, headwidth = 5),
+                horizontalalignment='right', verticalalignment='top',
+                fontsize = fs)
+    plt.annotate('Phase 3', xy=(datetime.datetime(2020, 6, 29), 0),  xycoords='data',
+                xytext=(datetime.datetime(2020, 6, 29), p2 + 2*diff), textcoords='data',
+                arrowprops=dict(facecolor='black', shrink=0.0005, width = 0.1, 
+                                headlength = 5, headwidth = 5),
+                horizontalalignment='center', verticalalignment='top',
+                fontsize = fs)
+    plt.annotate('Phase 4', xy=(datetime.datetime(2020, 7, 20), 0),  xycoords='data',
+                xytext=(datetime.datetime(2020, 7, 20), p2 + diff), textcoords='data',
+                arrowprops=dict(facecolor='black', shrink=0.0005, width = 0.1, 
+                                headlength = 5, headwidth = 5),
+                horizontalalignment='left', verticalalignment='top',
+                fontsize = fs)
+    plt.annotate('Phase 5', xy=(datetime.datetime(2020, 8, 10), 0),  xycoords='data',
+                xytext=(datetime.datetime(2020, 8, 10), p2), textcoords='data',
+                arrowprops=dict(facecolor='black', shrink=0.0005, width = 0.1, 
+                                headlength = 5, headwidth = 5),
+                horizontalalignment='left', verticalalignment='top',
+                fontsize = fs)
+
+ax.xaxis.set_major_locator(years)
+ax.xaxis.set_major_formatter(years_fmt)
+ax.xaxis.set_minor_locator(months)
+ax.xaxis.set_minor_formatter(months_fmt)
+ax.tick_params(which='major', length=16)
+plt.setp(ax.xaxis.get_minorticklabels(), rotation=45)
+#plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
+
+#plt.xlabel('time (months)')
 plt.ylabel('No. of individuals')
 
-
-plt.savefig('no_lockdown_lin_scale.png', bbox_inches='tight', dpi = 300)
-
-fig, ax = plt.subplots()
-plt.plot(i[:100], label = 'I')
-plt.plot(d[:100], label = 'D')
-plt.plot(x[:100], label = 'X')
-plt.legend()
+if save_figs == True:
+    plt.savefig(op_name + '_lin_scale.png', bbox_inches='tight', dpi = 300)
 
 
-fs = 8
-plt.annotate('Initial Lockdown', xy=(50, 0),  xycoords='data',
-            xytext=(50, -1000), textcoords='data',
-            arrowprops=dict(facecolor='black', shrink=0.0005, width = 0.1, 
-                            headlength = 5, headwidth = 5),
-            horizontalalignment='right', verticalalignment='top',
-            fontsize = fs)
-
-plt.ylabel('No. of individuals')
-
-
-plt.savefig('five_phase_model_pre_lockdown.png', bbox_inches='tight', dpi = 300)
