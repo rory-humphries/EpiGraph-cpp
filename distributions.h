@@ -69,8 +69,6 @@ struct ProbDist
 
     std::uniform_real_distribution<double> uni01_distribution;
 
-    ProbDist() {}
-
     template<typename Iter1, typename Iter2>
     ProbDist(Iter1 val_begin, Iter1 val_end, Iter2 prob_begin, Iter2 prob_end) {
         for (;val_begin != val_end; val_begin++) {
@@ -78,7 +76,7 @@ struct ProbDist
         }
         std::vector<double> probs;
         for (;prob_begin != prob_end; prob_begin++) {
-            probs.push_back(*val_begin);
+            probs.push_back(*prob_begin);
         }
         if (vals.size()!=probs.size()) {
             throw std::invalid_argument("Iterators length don't match");

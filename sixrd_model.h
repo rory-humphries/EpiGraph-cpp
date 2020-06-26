@@ -11,18 +11,23 @@
 #define EPIGRAPH_SIRX_NETWORK_H
 
 
-class SIXRDModel : public SpatialMetaPopNetwork {
+template<template<typename, typename> class TNetwork, typename VData, typename EData>
+class SIXRDModel  {
 
 public:
+    using state_type = std::vector<std::vector<double>>;
+    using population_type = typename VData::population_type;
+
     double m_beta; // chance of infection on contact
     double m_c;
     double m_mu; // rate of recovery
     double m_kappa;
     double m_alpha;
 
+    TNetwork<VData, EData>* network;
+
     // constructors
-    SIXRDModel() : SpatialMetaPopNetwork(),
-                   m_beta(1),
+    SIXRDModel() : m_beta(1),
                    m_c(1),
                    m_mu(1),
                    m_kappa(1),
@@ -32,17 +37,17 @@ public:
                double c,
                double mu,
                double alpha,
-               double kappa,
-               double compliance,
-               double max_dist) : SpatialMetaPopNetwork(),
-                                  m_beta(beta),
+               double kappa) : m_beta(beta),
                                   m_c(c),
                                   m_mu(mu),
                                   m_alpha(alpha),
                                   m_kappa(kappa) {}
 
+    auto set_network(TNetwork<VData, EData> &g) -> void {
+        network = &g;
+    }
 
-    void operator()(const state_type &x, state_type &dxdt, const double t) {
+    auto operator()(const state_type &x, state_type &dxdt, const double t) -> void{
         /*
          * The ode describing the evolution of the network SIXRD system.
          * The paramater x and dxdt should be of the type std::vector<std::vector<double>> where the inner
@@ -54,31 +59,31 @@ public:
          * x[i][3] and dxdt[i][3] corresponds to the variable R
          * x[i][4] and dxdt[i][4] corresponds to the variable D
          */
-        for (int v = 0; v < graph.num_vertices(); v++) {
+        for (int v = 0; v < (*network).num_vertices(); v++) {
 
             double new_s = x[v][0];
             double new_i = x[v][1];
-            double new_n = populations[v];
+            double new_n = (*network).vprop[v].population;
 
 
-            auto it_pair = graph.out_edges(v);
+            auto it_pair = (*network).out_edges(v);
             for (auto it = it_pair.first; it != it_pair.second; it++) {
-                double tmp_n = weights.at(*it);
+                double tmp_n = (*network).eprop[*it].population;
                 new_n -= tmp_n;
-                new_i -= tmp_n * x[v][1] / populations[v];
-                new_s -= tmp_n * x[v][0] / populations[v];
+                new_i -= tmp_n * x[v][1] / (*network).vprop[v].population;
+                new_s -= tmp_n * x[v][0] / (*network).vprop[v].population;
             }
-            it_pair = graph.in_edges(v);
+            it_pair = (*network).in_edges(v);
             for (auto it = it_pair.first; it != it_pair.second; it++) {
-                double tmp_n = weights.at(*it);
+                double tmp_n = (*network).eprop[*it].population;
                 new_n += tmp_n;
-                new_i += tmp_n * x[it->src][1] / populations[it->src];
+                new_i += tmp_n * x[it->src][1] / (*network).vprop[it->src].population;
             }
 
-            it_pair = graph.in_edges(v);
+            it_pair = (*network).in_edges(v);
             for (auto it = it_pair.first; it != it_pair.second; it++) {
-                double tmp_n = weights.at(*it);
-                double tmp_s = tmp_n * x[it->src][0] / populations[it->src];
+                double tmp_n = (*network).eprop[*it].population;
+                double tmp_s = tmp_n * x[it->src][0] / (*network).vprop[it->src].population;
 
                 dxdt[it->src][0] -= m_beta * m_c * tmp_s * new_i / new_n;
                 dxdt[it->src][1] += m_beta * m_c * tmp_s * new_i / new_n;
@@ -93,6 +98,43 @@ public:
             dxdt[v][4] += m_alpha * x[v][1] + m_alpha * x[v][2];// D
 
         }
+    }
+
+    auto get_zero_state() -> state_type {
+        std::vector<double> tmp(5, 0);
+        std::vector<std::vector<double>> state((*network).num_vertices(), tmp);
+        return std::move(state);
+    }
+
+    auto get_fully_susceptible_state() -> state_type {
+        std::vector<double> tmp(5, 0);
+        std::vector<std::vector<double>> state((*network).num_vertices(), tmp);
+        for (int i = 0; i < (*network).num_vertices(); i++) {
+
+            state[i][0] = (*network).vprop[i].population;
+            state[i][1] = 0;
+            state[i][2] = 0;
+            state[i][3] = 0;
+            state[i][4] = 0;
+
+        }
+        return std::move(state);
+    }
+
+    auto infect_vertex(state_type &x, Vertex v, population_type N) -> void {
+        x[v][0] = (*network).vprop[v].population - 2;
+        x[v][1] = 2;
+        x[v][2] = 0;
+        x[v][3] = 0;
+        x[v][4] = 0;
+    }
+
+    auto infect_vertex(state_type &x, Vertex v) -> void {
+            x[v][0] = (*network).vprop[v].population - 2;
+            x[v][1] = 2;
+            x[v][2] = 0;
+            x[v][3] = 0;
+            x[v][4] = 0;
     }
 
     void write_state(const state_type &x, const std::string& id, std::string dir) {
@@ -110,25 +152,78 @@ public:
         myfile << "X,";
         myfile << "N\n";
 
-        for (int v = 0; v<get_graph().num_vertices(); v++)
+        for (int v = 0; v<(*network).num_vertices(); v++)
         {
-            myfile << longlat[v].first << ",";
-            myfile << longlat[v].second << ",";
+            myfile << (*network).vprop[v].position.first << ",";
+            myfile << (*network).vprop[v].position.second << ",";
             myfile << x[v][0] <<",";
             myfile << x[v][1] <<",";
             myfile << x[v][2] <<",";
             myfile << x[v][3] <<",";
             myfile << x[v][4] <<",";
-            myfile << populations[v] <<"\n";
+            myfile << (*network).vprop[v].population <<"\n";
         }
         myfile.close();
+    }
+
+    void write_compartment_totals(const state_type &x, const std::string& path_to_file, bool append_file = false) {
+
+        double sumi = 0;
+        double sums = 0;
+        double sumr = 0;
+        double sumx = 0;
+        double sumd = 0;
+        for (auto &k: x) {
+            sums += k[0];
+            sumi += k[1];
+            sumx += k[2];
+            sumr += k[3];
+            sumd += k[4];
+        }
+
+        std::ofstream myfile;
+
+        if (append_file)
+            myfile.open (path_to_file, std::ios_base::app);
+        else {
+            myfile.open (path_to_file);
+            myfile << "S,";
+            myfile << "I,";
+            myfile << "X,";
+            myfile << "R,";
+            myfile << "D\n";
+        }
+
+
+        myfile << sums <<",";
+        myfile << sumi <<",";
+        myfile << sumx <<",";
+        myfile << sumr <<",";
+        myfile << sumd <<"\n";
+        myfile.close();
+    }
+
+    auto print_compartment_totals(const state_type& x) {
+        double sumi = 0;
+        double sums = 0;
+        double sumr = 0;
+        double sumx = 0;
+        double sumd = 0;
+        for (auto &k: x) {
+            sums += k[0];
+            sumi += k[1];
+            sumx += k[2];
+            sumr += k[3];
+            sumd += k[4];
+        }
+
+        std :: cout << "S = " << sums << ", I = " << sumi<< ", R = " << sumr << ", X = " << sumx << ", D = " << sumd << ", N = " << sums+sumi+sumx+sumr+sumd << "\n";
     }
 };
 
 
-
-
-auto add_metapopulations_from_csv(SIXRDModel &g, std::string path_to_file) -> void {
+template <typename TNetwork>
+auto add_metapopulations_from_csv(TNetwork &g, std::string path_to_file) -> void {
     std::ifstream myfile;
     myfile.open(path_to_file);
 
@@ -136,7 +231,6 @@ auto add_metapopulations_from_csv(SIXRDModel &g, std::string path_to_file) -> vo
     double longatude;
     double latatude;
     int population;
-    int commuters;
     std::string line;
 
     if (myfile.is_open()) {
@@ -157,7 +251,9 @@ auto add_metapopulations_from_csv(SIXRDModel &g, std::string path_to_file) -> vo
                 getline(s, field, ',');
                 population = stoi(field);
             }
-            g.add_metapop(population, longatude, latatude);
+            auto v = g.add_vertex();
+            g.vprop[v].population = population;
+            g.vprop[v].position = {longatude, latatude};
         }
     }
     myfile.close();

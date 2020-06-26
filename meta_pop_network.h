@@ -10,11 +10,42 @@
 #include "edge.h"
 #include "graph.h"
 
+struct VMetaPop {
+    /*
+     * A vertex property that holds a population
+     */
+    using population_type = double;
+
+    population_type population;
+};
+
+struct EMetaPop {
+    /*
+     * An edge property that holds a population
+     */
+    using population_type = double;
+
+    population_type population;
+};
+
+struct VSpatialMetaPop {
+    /*
+     * A vertex property that holds a population and location
+     */
+    using population_type = double;
+    using position_type = std::pair<double, double>;
+
+    population_type population;
+    position_type position;
+};
+
 class SpatialMetaPopNetwork {
 
 public:
-    using state_type = std::vector<std::vector<double>>;
     using coupling_type = std::map<Edge, double>;
+    using OutEdgeIter = Graph::OutEdgeIter;
+    using InEdgeIter = Graph::OutEdgeIter;
+    using EdgeIter = Graph::EdgeIter;
 
     // the underlying graph structure
     Graph graph;
@@ -59,12 +90,21 @@ public:
         longlat.emplace_back(longatude, latatude);
     }
 
-    auto set_population(Vertex v, double N) {
-        populations.at(v) = N;
+    auto out_edges(Vertex v) -> std::pair<OutEdgeIter, OutEdgeIter> {
+        return graph.out_edges(v);
     }
 
+    auto set_population(Vertex v, double N) -> void {
+        populations.at(v) = N;
+    }
+    auto get_population(Vertex v) -> double {
+        return populations.at(v);
+    }
     auto set_longlat(Vertex v, double lo, double la) {
         longlat.at(v) = {lo, la};
+    }
+    auto get_longlat(Vertex v) -> std::pair<double, double> {
+        return longlat.at(v);
     }
 
     auto add_coupling(int vsrc, int vdst, double weight, bool sum_weights = false) -> void {
@@ -98,6 +138,8 @@ public:
         graph.remove_all_edges();
         weights.clear();
     }
+public:
+
 };
 
 #endif //EPIGRAPH_META_POP_NETWORK_H
