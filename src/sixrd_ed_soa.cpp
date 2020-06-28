@@ -1,5 +1,5 @@
-#include "travel_model.h"
-#include "sixrd_model.h"
+#include "../include/travel_model.h"
+#include "../include/sixrd_model.h"
 
 #include <iostream>
 #include <random>

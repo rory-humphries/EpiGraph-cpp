@@ -137,7 +137,6 @@ struct ProbDist {
     }
 };
 
-
 auto ProbDist_from_csv(std::string csv) -> ProbDist {
 
     std::ifstream myfile;

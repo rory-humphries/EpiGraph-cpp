@@ -3,7 +3,7 @@ project(EpiGraph)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(EpiGraph edge.h sixrd_model.h graph.h distributions.h csv.h sixrd_ed_soa.cpp distributions.cpp spatial_utils.h meta_pop_network.h io.h travel_model.h)
+add_executable(EpiGraph include/edge.h include/sixrd_model.h include/graph.h include/distributions.h include/csv.h src/sixrd_ed_soa.cpp src/distributions.cpp include/spatial_utils.h include/meta_pop_network.h include/io.h include/travel_model.h)
 
 find_package(OpenMP)
 if (OPENMP_FOUND)
