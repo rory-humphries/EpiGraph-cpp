@@ -18,13 +18,15 @@ public:
     using state_type = std::vector<std::vector<double>>;
     using population_type = typename VData::population_type;
 
+    using NetworkPtr = std::shared_ptr<TNetwork<VData, EData>>;
+
     double m_beta; // chance of infection on contact
     double m_c;
     double m_mu; // rate of recovery
     double m_kappa;
     double m_alpha;
 
-    TNetwork<VData, EData>* network;
+    TNetwork<VData, EData>* network_ptr;
 
     // constructors
     SIXRDModel() : m_beta(1),
@@ -44,12 +46,12 @@ public:
                                   m_kappa(kappa) {}
 
     auto set_network(TNetwork<VData, EData> &g) -> void {
-        network = &g;
+        network_ptr = &g;
     }
 
     auto operator()(const state_type &x, state_type &dxdt, const double t) -> void{
         /*
-         * The ode describing the evolution of the network SIXRD system.
+         * The ode describing the evolution of the network_ptr SIXRD system.
          * The paramater x and dxdt should be of the type std::vector<std::vector<double>> where the inner
          * vector is of size 5 such that
          *
@@ -59,31 +61,31 @@ public:
          * x[i][3] and dxdt[i][3] corresponds to the variable R
          * x[i][4] and dxdt[i][4] corresponds to the variable D
          */
-        for (int v = 0; v < (*network).num_vertices(); v++) {
+        for (int v = 0; v < (*network_ptr).num_vertices(); v++) {
 
             double new_s = x[v][0];
             double new_i = x[v][1];
-            double new_n = (*network).vprop[v].population;
+            double new_n = (*network_ptr).vprop[v].population;
 
 
-            auto it_pair = (*network).out_edges(v);
+            auto it_pair = (*network_ptr).out_edges(v);
             for (auto it = it_pair.first; it != it_pair.second; it++) {
-                double tmp_n = (*network).eprop[*it].population;
+                double tmp_n = (*network_ptr).eprop[*it].population;
                 new_n -= tmp_n;
-                new_i -= tmp_n * x[v][1] / (*network).vprop[v].population;
-                new_s -= tmp_n * x[v][0] / (*network).vprop[v].population;
+                new_i -= tmp_n * x[v][1] / (*network_ptr).vprop[v].population;
+                new_s -= tmp_n * x[v][0] / (*network_ptr).vprop[v].population;
             }
-            it_pair = (*network).in_edges(v);
+            it_pair = (*network_ptr).in_edges(v);
             for (auto it = it_pair.first; it != it_pair.second; it++) {
-                double tmp_n = (*network).eprop[*it].population;
+                double tmp_n = (*network_ptr).eprop[*it].population;
                 new_n += tmp_n;
-                new_i += tmp_n * x[it->src][1] / (*network).vprop[it->src].population;
+                new_i += tmp_n * x[it->src][1] / (*network_ptr).vprop[it->src].population;
             }
 
-            it_pair = (*network).in_edges(v);
+            it_pair = (*network_ptr).in_edges(v);
             for (auto it = it_pair.first; it != it_pair.second; it++) {
-                double tmp_n = (*network).eprop[*it].population;
-                double tmp_s = tmp_n * x[it->src][0] / (*network).vprop[it->src].population;
+                double tmp_n = (*network_ptr).eprop[*it].population;
+                double tmp_s = tmp_n * x[it->src][0] / (*network_ptr).vprop[it->src].population;
 
                 dxdt[it->src][0] -= m_beta * m_c * tmp_s * new_i / new_n;
                 dxdt[it->src][1] += m_beta * m_c * tmp_s * new_i / new_n;
@@ -91,8 +93,7 @@ public:
             }
 
             dxdt[v][0] -= m_beta * m_c * new_s * new_i / new_n; // S
-            dxdt[v][1] +=
-                    m_beta * m_c * new_s * new_i / new_n - m_mu * x[v][1] - m_alpha * x[v][1] - m_kappa * x[v][1];// I
+            dxdt[v][1] += m_beta * m_c * new_s * new_i / new_n - m_mu * x[v][1] - m_alpha * x[v][1] - m_kappa * x[v][1];// I
             dxdt[v][2] += m_kappa * x[v][1] - m_mu * x[v][2] - m_alpha * x[v][2]; // X
             dxdt[v][3] += m_mu * x[v][1] + m_mu * x[v][2];// R
             dxdt[v][4] += m_alpha * x[v][1] + m_alpha * x[v][2];// D
@@ -102,16 +103,16 @@ public:
 
     auto get_zero_state() -> state_type {
         std::vector<double> tmp(5, 0);
-        std::vector<std::vector<double>> state((*network).num_vertices(), tmp);
+        std::vector<std::vector<double>> state((*network_ptr).num_vertices(), tmp);
         return std::move(state);
     }
 
     auto get_fully_susceptible_state() -> state_type {
         std::vector<double> tmp(5, 0);
-        std::vector<std::vector<double>> state((*network).num_vertices(), tmp);
-        for (int i = 0; i < (*network).num_vertices(); i++) {
+        std::vector<std::vector<double>> state((*network_ptr).num_vertices(), tmp);
+        for (int i = 0; i < (*network_ptr).num_vertices(); i++) {
 
-            state[i][0] = (*network).vprop[i].population;
+            state[i][0] = (*network_ptr).vprop[i].population;
             state[i][1] = 0;
             state[i][2] = 0;
             state[i][3] = 0;
@@ -122,7 +123,7 @@ public:
     }
 
     auto infect_vertex(state_type &x, Vertex v, population_type N) -> void {
-        x[v][0] = (*network).vprop[v].population - 2;
+        x[v][0] = (*network_ptr).vprop[v].population - 2;
         x[v][1] = 2;
         x[v][2] = 0;
         x[v][3] = 0;
@@ -130,7 +131,7 @@ public:
     }
 
     auto infect_vertex(state_type &x, Vertex v) -> void {
-            x[v][0] = (*network).vprop[v].population - 2;
+            x[v][0] = (*network_ptr).vprop[v].population - 2;
             x[v][1] = 2;
             x[v][2] = 0;
             x[v][3] = 0;
@@ -152,16 +153,16 @@ public:
         myfile << "X,";
         myfile << "N\n";
 
-        for (int v = 0; v<(*network).num_vertices(); v++)
+        for (int v = 0; v<(*network_ptr).num_vertices(); v++)
         {
-            myfile << (*network).vprop[v].position.first << ",";
-            myfile << (*network).vprop[v].position.second << ",";
+            myfile << (*network_ptr).vprop[v].position.first << ",";
+            myfile << (*network_ptr).vprop[v].position.second << ",";
             myfile << x[v][0] <<",";
             myfile << x[v][1] <<",";
             myfile << x[v][2] <<",";
             myfile << x[v][3] <<",";
             myfile << x[v][4] <<",";
-            myfile << (*network).vprop[v].population <<"\n";
+            myfile << (*network_ptr).vprop[v].population << "\n";
         }
         myfile.close();
     }

@@ -22,7 +22,7 @@ import os
 import geopandas as gpd
 import imageio
 
-direc = '../scenarios/257_1_0/'
+direc = '../output/'
 files = []
 for filename in os.listdir(direc):
     files += [filename]
@@ -111,9 +111,9 @@ for filename in range(1, len(files)):
     plt.axis('equal')
     plt.tight_layout()
     plt.savefig('tmp.png')
-    images.append(imageio.imread("tmp.png"))
+    #images.append(imageio.imread("tmp.png"))
     plt.show()
-imageio.mimsave('output.gif', images)
+#imageio.mimsave('output.gif', images)
 
 
 

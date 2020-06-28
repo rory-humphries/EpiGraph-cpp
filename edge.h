@@ -30,6 +30,9 @@ public:
     bool operator==(const Edge& e) {
         return src == e.src && dst == e.dst;
     }
+    bool operator==(const Edge& e) const {
+        return src == e.src && dst == e.dst;
+    }
     bool operator!=(const Edge &e) {
         return !(*this == e);
     }

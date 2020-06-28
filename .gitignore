@@ -1,5 +1,4 @@
 cmake*/
-.*/
-output/*
-data/processed/ed_soa_travel_prob_mat.csv
+.*
+output
 gifs/
