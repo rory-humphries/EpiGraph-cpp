@@ -70,6 +70,20 @@ ed_soa_gdf = gpd.GeoDataFrame(ed_soa_df)
 ed_soa_gdf['geometry'] = geoms
 area = ed_soa_gdf.area.to_numpy()/1000
 
+cmap = plt.cm.jet  # define the colormap
+# extract all colors from the .jet map
+cmaplist = [cmap(i) for i in range(cmap.N)]
+# force the first color entry to be grey
+#cmaplist[0] = (.5, .5, .5, 1.0)
+
+# create the new map
+#cmap = mpl.colors.LinearSegmentedColormap.from_list(
+#    'Custom cmap', cmaplist, cmap.N)
+
+# define the bins and normalize
+bounds = [0, 5, 500, 1000, 1900, 3500, 6500]
+norm = matplotlib.colors.BoundaryNorm(bounds, len(bounds))
+
 # get max values
 maxs = 0
 maxi = 0
@@ -79,7 +93,7 @@ maxx = 0
 for filename in range(1, len(files)):
     df = pd.read_csv(direc+str(filename)+".csv")
     maxs = max(maxs, max(df.S))
-    maxi = max(maxi, max(df.I/area))
+    maxi = max(maxi, max(df.I))
     maxr = max(maxr, max(df.R))
     maxd = max(maxd, max(df.D))
     maxx = max(maxx, max(df.X))
@@ -93,13 +107,13 @@ for filename in range(1, len(files)):
    
     
     ed_soa_gdf['I'] = 0.1
-    ed_soa_gdf['I'] = df.I.to_numpy()/area
+    ed_soa_gdf['I'] = (df.I.to_numpy()+df.R.to_numpy()+df.X.to_numpy())/100000
     
     #lognorm = matplotlib.colors.LogNorm(1, max(1, df.I.max()))
-    lognorm = matplotlib.colors.Normalize(1, maxi)
+    lognorm = matplotlib.colors.Normalize(0, max(ed_soa_gdf['I']))
 
 
-    ax2=ed_soa_gdf.plot(ax=ax, linewidth=0.0001, column = 'I', norm=lognorm, legend = False)
+    ax2=ed_soa_gdf.plot(ax=ax, linewidth=0.0001, column = 'I', cmap = cmap, norm=norm, legend = False)
     patches = ax2.collections[0]
     cbar = plt.colorbar(patches, ax=ax2, extend='max')
     cbar.ax.set_ylabel('No. of infected', fontsize = 15)

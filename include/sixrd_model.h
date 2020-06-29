@@ -6,6 +6,7 @@
 #include "graph.h"
 #include "spatial_utils.h"
 #include "meta_pop_network.h"
+#include "csv.h"
 
 #ifndef EPIGRAPH_SIRX_NETWORK_H
 #define EPIGRAPH_SIRX_NETWORK_H
@@ -122,20 +123,13 @@ public:
         return std::move(state);
     }
 
-    auto infect_vertex(state_type &x, Vertex v, population_type N) -> void {
-        x[v][0] = (*network_ptr).vprop[v].population - 2;
-        x[v][1] = 2;
+    auto infect_vertex(state_type &x, Vertex v, population_type N = 1) -> void {
+        double change = x[v][0] - (0 > x[v][0]-N ? 0 : x[v][0]-N);
+        x[v][0] -= change;
+        x[v][1] += change;
         x[v][2] = 0;
         x[v][3] = 0;
         x[v][4] = 0;
-    }
-
-    auto infect_vertex(state_type &x, Vertex v) -> void {
-            x[v][0] = (*network_ptr).vprop[v].population - 2;
-            x[v][1] = 2;
-            x[v][2] = 0;
-            x[v][3] = 0;
-            x[v][4] = 0;
     }
 
     void write_state(const state_type &x, const std::string& id, std::string dir) {
@@ -225,39 +219,15 @@ public:
 
 template <typename TNetwork>
 auto add_metapopulations_from_csv(TNetwork &g, std::string path_to_file) -> void {
-    std::ifstream myfile;
-    myfile.open(path_to_file);
+    io::CSVReader<3> in(path_to_file);
+    in.read_header(io::ignore_extra_column, "long", "lat", "population");
 
-    int vertex_id;
-    double longatude;
-    double latatude;
-    int population;
-    std::string line;
-
-    if (myfile.is_open()) {
-        getline(myfile, line);
-        while (getline(myfile, line)) {
-            std::istringstream s(line);
-            std::string field;
-
-            while (getline(s, field, ',')) {
-                vertex_id = stoi(field);
-
-                getline(s, field, ',');
-                longatude = stof(field);
-
-                getline(s, field, ',');
-                latatude = stof(field);
-
-                getline(s, field, ',');
-                population = stoi(field);
-            }
-            auto v = g.add_vertex();
-            g.vprop[v].population = population;
-            g.vprop[v].position = {longatude, latatude};
-        }
+    double lon; double lat; double population;
+    while(in.read_row(lon, lat, population)){
+        auto v = g.add_vertex();
+        g.vprop[v].population = population;
+        g.vprop[v].position = {lon, lat};
     }
-    myfile.close();
 }
 
 

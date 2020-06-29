@@ -51,7 +51,7 @@ int main() {
 
     // the initially infected vertex
     auto rand_v = 257;//uni_dist(global_engine());
-    epi_model.infect_vertex(state, rand_v);
+    epi_model.infect_vertex(state, rand_v, 2);
 
     // the filename for the output file of the total compartment values
     std::string file_output_path("../" + std::to_string(rand_v) + "2_output.csv");

@@ -61,7 +61,8 @@ public:
             double tmp = travel_dist.get_prob(d);
 
             if (d > 0) { // if the distance is 0 then there is no circle
-                tmp /= 2*3.14*d; // divide by the circumference of the circle that v_dst lies on (possibly weight by population in the future)
+                //tmp /= 2*3.14*d; // divide by the circumference of the circle that v_dst lies on (possibly weight by population in the future)
+                tmp;
                 // TODO: the number of nodes that are a distance d away is not 2*pi*r, will probably have to do some sort of binning of the data.
             }
 

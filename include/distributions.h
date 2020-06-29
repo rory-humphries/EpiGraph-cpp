@@ -11,6 +11,7 @@
 #include <sstream>
 #include <algorithm>
 #include <iostream>
+#include "csv.h"
 
 // not thread safe, careful with openMP
 std::mt19937 &global_engine();
@@ -138,31 +139,13 @@ struct ProbDist {
 };
 
 auto ProbDist_from_csv(std::string csv) -> ProbDist {
-
-    std::ifstream myfile;
-    std::string line;
-    myfile.open(csv);
-
-    std::vector<double> vals;
-    std::vector<double> probs;
+    io::CSVReader<2> in(csv);
+    in.read_header(io::ignore_extra_column, "value", "probability");
     std::vector<std::pair<double, double>> val_prob_pairs;
 
-    if (myfile.is_open()) {
-        getline(myfile, line);
-
-        while (getline(myfile, line)) {
-            std::istringstream s(line);
-            std::string field;
-
-            getline(s, field, ',');
-            double val = stod(field);
-
-            getline(s, field, ',');
-            double prob = stod(field);
-
-            val_prob_pairs.push_back({val, prob});
-
-        }
+    double val; double prob;
+    while(in.read_row(val, prob)) {
+        val_prob_pairs.push_back({val, prob});
     }
 
     return ProbDist(val_prob_pairs.begin(), val_prob_pairs.end());
