@@ -107,7 +107,7 @@ for filename in range(1, len(files)):
    
     
     ed_soa_gdf['I'] = 0.1
-    ed_soa_gdf['I'] = (df.I.to_numpy()+df.R.to_numpy()+df.X.to_numpy())/100000
+    ed_soa_gdf['I'] = 100000*(df.I.to_numpy()+df.R.to_numpy()+df.X.to_numpy())/df.sum(axis=1).to_numpy()
     
     #lognorm = matplotlib.colors.LogNorm(1, max(1, df.I.max()))
     lognorm = matplotlib.colors.Normalize(0, max(ed_soa_gdf['I']))

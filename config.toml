@@ -1,0 +1,145 @@
+[file_paths]
+# path to file that holds the distribution of population proportions that commute.
+commuter_distribution = "../data/processed/ed_commuter_probs.csv"
+# path to file that holds the distribution of travel distances
+travel_distribution = "../data/processed/ed_distance_probs.csv"
+# path to file that holds the input information for each vertex
+vertex_data = "../data/processed/ed_soa_vertices.csv"
+
+[output]
+# output the totals/sums belongong to each comopartment in the network at each time step
+aggregate = true
+# the file name and path for the agg output file
+aggregate_path = "../agg_output.csv"
+
+# output the state of each vertex at each time step
+full = true
+# the directory to output all the full output files
+# don't forget last slash
+full_path = "../output/"
+
+
+[parameters]
+
+# the vertices at which the disease first appears
+# the vertex indices are those given in the vertex_data file
+initial_seed = [257]
+
+# must list all phases in order of which they happen in the simulation, if you add any phases be sure to list it's
+# order here
+order = ["pre_lockdown", "lockdown", "phase_1", "phase_2", "phase_3", "phase_4", "phase_5", "post_lockdown"]
+
+# initial parameters for the model
+
+# beta = chance of infection on contact
+# mu = recovery rate
+# c = rate of mixing
+# alpha = death rate
+# kappa = rate of moving from infected into quarantine
+# max_dist = maximum travel distance in kilometers
+# compliance = rate of compliance with maximum travel distance
+
+# model starts in pre lockdown
+
+# each of the below subsections requires a duration (in days)
+
+# to update any of the parameters above simply enter it's new value in any of the subsections, it will persist
+# with that value until changed again
+
+
+    [parameters.pre_lockdown]
+
+    duration = 50
+
+    beta = 0.37
+    mu = 0.1
+    c = 1.0
+    alpha = 0.0028
+    kappa = 0.1
+    max_dist = 1000.0
+    compliance = 1.0
+
+    [parameters.lockdown]
+
+    duration = 67
+
+    beta = 0.37
+    mu = 0.1
+    c = 0.6
+    alpha = 0.0028
+    kappa = 0.1
+    max_dist = 2.0
+    compliance = 0.8
+
+    [parameters.phase_1]
+
+    duration = 21
+
+    beta = 0.37
+    mu = 0.1
+    c = 0.4
+    alpha = 0.0028
+    kappa = 0.1
+    max_dist = 2.0
+    compliance = 0.8
+
+    [parameters.phase_2]
+
+    duration = 21
+
+    beta = 0.37
+    mu = 0.1
+    c = 0.3
+    alpha = 0.0028
+    kappa = 0.1
+    max_dist = 5.0
+    compliance = 0.8
+
+    [parameters.phase_3]
+
+    duration = 21
+
+    beta = 0.37
+    mu = 0.1
+    c = 0.4
+    alpha = 0.0028
+    kappa = 0.1
+    max_dist = 20.0
+    compliance = 0.8
+
+    [parameters.phase_4]
+
+    duration = 21
+
+    beta = 0.37
+    mu = 0.1
+    c = 0.5
+    alpha = 0.0028
+    kappa = 0.1
+    max_dist = 20.0
+    compliance = 0.8
+
+    [parameters.phase_5]
+
+    duration = 21
+
+    beta = 0.37
+    mu = 0.1
+    c = 0.6
+    alpha = 0.0028
+    kappa = 0.1
+    max_dist = 1000.0
+    compliance = 1.0
+
+    [parameters.post_lockdown]
+
+
+    duration = 400
+
+    beta = 0.37
+    mu = 0.1
+    c = 1.0
+    alpha = 0.0028
+    kappa = 0.1
+    max_dist = 1000.0
+    compliance = 1.0

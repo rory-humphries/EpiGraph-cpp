@@ -136,7 +136,7 @@ public:
         std::ofstream myfile;
         std::string newd = dir;
 
-        myfile.open ("../"+ dir + "/" + id + ".csv");
+        myfile.open (dir + id + ".csv");
 
         myfile << "x,";
         myfile << "y,";
