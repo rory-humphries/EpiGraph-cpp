@@ -3,7 +3,10 @@ project(EpiGraph)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(EpiGraph include/edge.h include/sixrd_model.h include/graph.h include/distributions.h include/csv.h src/sixrd_ed_soa.cpp src/distributions.cpp include/spatial_utils.h include/meta_pop_network.h include/io.h include/travel_model.h)
+add_executable(MultiPhase     include/edge.h include/sixrd_model.h include/graph.h include/distributions.h include/csv.h src/distributions.cpp include/spatial_utils.h include/meta_pop_network.h include/io.h include/travel_model.h src/multi_phase.cpp)
+add_executable(VertexLockDown include/edge.h include/sixrd_model.h include/graph.h include/distributions.h include/csv.h src/distributions.cpp include/spatial_utils.h include/meta_pop_network.h include/io.h include/travel_model.h src/vertex_dyn_lockdown.cpp)
+add_executable(CountyLockDown include/edge.h include/sixrd_model.h include/graph.h include/distributions.h include/csv.h src/distributions.cpp include/spatial_utils.h include/meta_pop_network.h include/io.h include/travel_model.h src/county_dyn_lockdown.cpp)
+
 
 find_package(OpenMP)
 if (OPENMP_FOUND)

@@ -102,6 +102,60 @@ public:
         }
     }
 
+    auto ode_per_vertex_params(const state_type &x, state_type &dxdt, const double t) -> void{
+        /*
+         * The ode describing the evolution of the network_ptr SIXRD system.
+         * The paramater x and dxdt should be of the type std::vector<std::vector<double>> where the inner
+         * vector is of size 5 such that
+         *
+         * x[i][0] and dxdt[i][0] corresponds to the variable S
+         * x[i][1] and dxdt[i][1] corresponds to the variable I
+         * x[i][2] and dxdt[i][2] corresponds to the variable X
+         * x[i][3] and dxdt[i][3] corresponds to the variable R
+         * x[i][4] and dxdt[i][4] corresponds to the variable D
+         */
+        for (int v = 0; v < (*network_ptr).num_vertices(); v++) {
+
+            double new_s = x[v][0];
+            double new_i = x[v][1];
+            double new_n = (*network_ptr).vprop[v].population;
+
+
+            auto it_pair = (*network_ptr).out_edges(v);
+            for (auto it = it_pair.first; it != it_pair.second; it++) {
+                double tmp_n = (*network_ptr).eprop[*it].population;
+                new_n -= tmp_n;
+                new_i -= tmp_n * x[v][1] / (*network_ptr).vprop[v].population;
+                new_s -= tmp_n * x[v][0] / (*network_ptr).vprop[v].population;
+            }
+            it_pair = (*network_ptr).in_edges(v);
+            for (auto it = it_pair.first; it != it_pair.second; it++) {
+                double tmp_n = (*network_ptr).eprop[*it].population;
+                new_n += tmp_n;
+                new_i += tmp_n * x[it->src][1] / (*network_ptr).vprop[it->src].population;
+            }
+
+            it_pair = (*network_ptr).in_edges(v);
+            for (auto it = it_pair.first; it != it_pair.second; it++) {
+                double tmp_n = (*network_ptr).eprop[*it].population;
+                double tmp_s = tmp_n * x[it->src][0] / (*network_ptr).vprop[it->src].population;
+
+                dxdt[it->src][0] -= (*network_ptr).vprop[v].beta * (*network_ptr).vprop[v].c * tmp_s * new_i / new_n;
+                dxdt[it->src][1] += (*network_ptr).vprop[v].beta * (*network_ptr).vprop[v].c * tmp_s * new_i / new_n;
+
+            }
+
+            dxdt[v][0] -= (*network_ptr).vprop[v].beta * (*network_ptr).vprop[v].c * new_s * new_i / new_n; // S
+            dxdt[v][1] += (*network_ptr).vprop[v].beta * (*network_ptr).vprop[v].c * new_s * new_i / new_n -
+                          (*network_ptr).vprop[v].mu * x[v][1] - (*network_ptr).vprop[v].alpha * x[v][1] -
+                          (*network_ptr).vprop[v].kappa * x[v][1];// I
+            dxdt[v][2] += (*network_ptr).vprop[v].kappa * x[v][1] - (*network_ptr).vprop[v].mu * x[v][2] - (*network_ptr).vprop[v].alpha * x[v][2]; // X
+            dxdt[v][3] += (*network_ptr).vprop[v].mu * x[v][1] + (*network_ptr).vprop[v].mu * x[v][2];// R
+            dxdt[v][4] += (*network_ptr).vprop[v].alpha * x[v][1] + (*network_ptr).vprop[v].alpha * x[v][2];// D
+
+        }
+    }
+
     auto get_zero_state() -> state_type {
         std::vector<double> tmp(5, 0);
         std::vector<std::vector<double>> state((*network_ptr).num_vertices(), tmp);
@@ -142,9 +196,9 @@ public:
         myfile << "y,";
         myfile << "S,";
         myfile << "I,";
+        myfile << "X,";
         myfile << "R,";
         myfile << "D,";
-        myfile << "X,";
         myfile << "N\n";
 
         for (int v = 0; v<(*network_ptr).num_vertices(); v++)
@@ -213,6 +267,120 @@ public:
         }
 
         std :: cout << "S = " << sums << ", I = " << sumi<< ", R = " << sumr << ", X = " << sumx << ", D = " << sumd << ", N = " << sums+sumi+sumx+sumr+sumd << "\n";
+    }
+
+    void next_gen_matrix(const state_type& x, const std::string& id, std::string dir) {
+
+        auto& net = *network_ptr;
+
+        std::ofstream myfile;
+        std::string newd = dir;
+
+        myfile.open (dir + id + ".csv");
+
+        std::vector<double> Nouts(net.num_vertices(), 0);
+        std::vector<double> Nins(net.num_vertices(), 0);
+
+        for (int vi = 0; vi < net.num_vertices(); vi++) {
+            auto it_pair_vi_out = net.out_edges(vi);
+            auto it_beg_vi_out = it_pair_vi_out.first;
+            auto it_end_vi_out = it_pair_vi_out.second;
+            double Ni_out = 0;
+
+            for (; it_beg_vi_out != it_end_vi_out; it_beg_vi_out++) {
+                Ni_out += net.eprop[*it_beg_vi_out].population;
+            }
+
+            auto it_pair_vi_in = net.in_edges(vi);
+            auto it_beg_vi_in = it_pair_vi_in.first;
+            auto it_end_vi_in = it_pair_vi_in.second;
+            double Ni_in = 0;
+
+            for (; it_beg_vi_in != it_end_vi_in; it_beg_vi_in++) {
+                Ni_in += net.eprop[*it_beg_vi_in].population;
+            }
+            Nouts[vi] = Ni_out;
+            Nins[vi] = Ni_in;
+        }
+
+        double a = (m_beta*m_c)/(m_mu*m_alpha*m_kappa);
+
+        for (int vi = 0; vi < net.num_vertices(); vi++)
+        {
+            std::cout << vi << std::endl;
+            double Ni = net.vprop[vi].population;
+            double Ni_out = Nouts[vi];
+            double Ni_in = Nins[vi];
+            double Si = x[vi][0];
+
+            for (int vj = 0; vj < net.num_vertices(); vj++) {
+
+                double Nj = net.vprop[vj].population;
+                double Nj_out = Nouts[vj];
+                double Nj_in = Nins[vj];
+
+                auto ep_ij = net.edge(vi, vj);
+                auto ep_ji = net.edge(vj, vi);
+
+                double Nij = 0, Nji = 0;
+                if (ep_ij.second)
+                    Nij = net.eprop[ep_ij.first].population;
+                if (ep_ji.second)
+                    Nji = net.eprop[ep_ji.first].population;
+
+                double b = 0;
+                double c = 0;
+                // check denominators
+                if(Ni != 0 && Nj != 0 && Ni + Ni_in + Ni_out != 0) {
+                    if (vi != vj)
+                        b = Si * (1 - Nij / Ni) * (Nji / Nj) / (Ni + Ni_in - Ni_out);
+                    else
+                        b = Si * (1 - Nij / Ni) * (1 - Ni_out/Ni + Nji / Nj) / (Ni + Ni_in - Ni_out);
+                }
+
+
+                auto it_pair_vj_out = net.out_edges(vi);
+                auto it_beg_vj_out = it_pair_vj_out.first;
+                auto it_end_vj_out = it_pair_vj_out.second;
+                for (; it_beg_vj_out != it_end_vj_out; it_beg_vj_out++) {
+
+                    auto vk = it_beg_vj_out->src;
+
+                    double Nk = net.vprop[vk].population;
+                    double Nk_out = Nouts[vk];
+                    double Nk_in = Nins[vk];
+
+                    auto ep_ik = net.edge(vi, vk);
+                    auto ep_jk = net.edge(vj, vk);
+                    auto ep_kj = net.edge(vk, vj);
+
+                    double Nik = 0, Njk = 0, Nkj = 0;
+                    if (ep_ik.second)
+                        Nik = net.eprop[ep_ik.first].population;
+                    if (ep_jk.second)
+                        Njk = net.eprop[ep_jk.first].population;
+                    if (ep_kj.second)
+                        Njk = net.eprop[ep_kj.first].population;
+
+                    if(Ni != 0 && Nj != 0 && Ni + Ni_in + Ni_out != 0) {
+                        if (vj != vk)
+                            c += Si * (Nik / Ni) * (Njk / Nj) / (Nk + Nk_in - Nk_out);
+                        else
+                            c += Si * (Nik / Ni) * (1 - Nj_out/Nj + Njk / Nj) / (Nk + Nk_in - Nk_out);
+                    }
+
+                }
+
+                double FVinv_ij = a*(b+c);
+
+                myfile << FVinv_ij;
+                if (vj < net.num_vertices() - 1)
+                    myfile << ",";
+                else
+                    myfile << "\n";
+            }
+        }
+        myfile.close();
     }
 };
 

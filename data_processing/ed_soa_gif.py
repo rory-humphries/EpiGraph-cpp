@@ -77,7 +77,7 @@ cmaplist = [cmap(i) for i in range(cmap.N)]
 #cmaplist[0] = (.5, .5, .5, 1.0)
 
 # create the new map
-#cmap = mpl.colors.LinearSegmentedColormap.from_list(
+#cmap = matplotlib.colors.LinearSegmentedColormap.from_list(
 #    'Custom cmap', cmaplist, cmap.N)
 
 # define the bins and normalize
@@ -90,10 +90,11 @@ maxi = 0
 maxr = 0
 maxd = 0
 maxx = 0
+mini = 1
 for filename in range(1, len(files)):
     df = pd.read_csv(direc+str(filename)+".csv")
     maxs = max(maxs, max(df.S))
-    maxi = max(maxi, max(df.I))
+    maxi = max(maxi, max(df.I.to_numpy()/(df.S.to_numpy()+df.I.to_numpy()+df.X.to_numpy()+df.R.to_numpy()+df.D.to_numpy())))
     maxr = max(maxr, max(df.R))
     maxd = max(maxd, max(df.D))
     maxx = max(maxx, max(df.X))
@@ -105,18 +106,19 @@ for filename in range(1, len(files)):
     fig, ax = plt.subplots(1, 1, figsize = (10,10))
     df = pd.read_csv(direc+str(filename)+".csv")
    
-    
+    N = df.S.to_numpy()+df.I.to_numpy()+df.X.to_numpy()+df.R.to_numpy()+df.D.to_numpy()
     ed_soa_gdf['I'] = 0.1
-    ed_soa_gdf['I'] = 100000*(df.I.to_numpy()+df.R.to_numpy()+df.X.to_numpy())/df.sum(axis=1).to_numpy()
+    ed_soa_gdf['I'] = 100000*df.I.to_numpy()/N
     
-    #lognorm = matplotlib.colors.LogNorm(1, max(1, df.I.max()))
-    lognorm = matplotlib.colors.Normalize(0, max(ed_soa_gdf['I']))
+    lognorm = matplotlib.colors.LogNorm(1, 100000*maxi)
+    #lognorm = matplotlib.colors.Normalize(0, 100000*maxi)
 
 
-    ax2=ed_soa_gdf.plot(ax=ax, linewidth=0.0001, column = 'I', cmap = cmap, norm=norm, legend = False)
+    #ax2=ed_soa_gdf.plot(ax=ax, linewidth=0.0001, column = 'I', cmap = plt.get_cmap('YlOrRd', len(bounds)), norm=lognorm, legend = False)
+    ax2=ed_soa_gdf.plot(ax=ax, linewidth=0.0001, column = 'I', cmap = plt.get_cmap('inferno_r'), norm=lognorm, legend = False)
     patches = ax2.collections[0]
     cbar = plt.colorbar(patches, ax=ax2, extend='max')
-    cbar.ax.set_ylabel('No. of infected', fontsize = 15)
+    cbar.ax.set_ylabel('No. of infected per km sq', fontsize = 15)
     cbar.ax.tick_params(labelsize=15) 
     
     
@@ -125,9 +127,9 @@ for filename in range(1, len(files)):
     plt.axis('equal')
     plt.tight_layout()
     plt.savefig('tmp.png')
-    #images.append(imageio.imread("tmp.png"))
+    images.append(imageio.imread("tmp.png"))
     plt.show()
-#imageio.mimsave('output.gif', images)
+imageio.mimsave('output.gif', images)
 
 
 

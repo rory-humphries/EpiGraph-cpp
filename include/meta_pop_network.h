@@ -39,4 +39,23 @@ struct VSpatialMetaPop {
     position_type position;
 };
 
+struct VTravel{
+    double max_dist;
+    double compliance;
+    double duration;
+    int phase;
+};
+
+struct VSIXRD {
+    double beta;
+    double mu;
+    double c;
+    double alpha;
+    double kappa;
+};
+
+struct VType {
+    int type;
+};
+
 #endif //EPIGRAPH_META_POP_NETWORK_H

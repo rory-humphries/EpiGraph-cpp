@@ -66,6 +66,7 @@ public:
                 // TODO: the number of nodes that are a distance d away is not 2*pi*r, will probably have to do some sort of binning of the data.
             }
 
+            tmp *= (*network_ptr).vprop[v_dst].population;
             sum_total += tmp;
             probs.push_back(tmp);
         }
@@ -133,6 +134,52 @@ public:
         std::discrete_distribution<> travel_distribution(probs.begin(), probs.end());
 
         add_out_travels(v_src, travel_distribution);
+    }
+    template<typename RandomGenerator>
+    auto add_out_travels_per_vertex(Vertex v_src, RandomGenerator& travel_distribution) -> void {
+        /*
+         * Add random edges to the network with a random number of travellers along each edge. The total number of
+         * travelers out of v_src is decided by the commuter_dist distribution which gives the proportion of the
+         * total population in v_src that will travel.
+         *
+         * travel distribution is a random distribution that supports the operator() which take a random generator and
+         * outputs a destination vertex.
+         */
+
+        std::uniform_real_distribution<> uni_dist(0, 1);
+
+        // get the number of people travelling
+        double travel_prop = commuter_dist(global_engine());
+        int N = (*network_ptr).vprop[v_src].population * travel_prop;
+
+
+        std::map<Vertex, double> edges_to_add;
+        for (int n = 0; n < N; n++) {
+
+            // find the destination vertex from the travel distribution
+            Vertex v_dst = travel_distribution(global_engine());
+            if (v_dst == v_src)
+                continue;
+
+            // if distance is greater than max distance only non compliant will travel
+            double lon1 = 0, lon2 = 0, lat1 = 0, lat2 = 0;
+            std::tie(lon1, lat1) = (*network_ptr).vprop[v_src].position;
+            std::tie(lon2, lat2) = (*network_ptr).vprop[v_dst].position;
+
+            if (long_lat_distance(lon1, lat1, lon2, lat2)/1000.0 >= (*network_ptr).vprop[v_src].max_dist) {
+                double u = uni_dist(global_engine());
+                if (u >= (*network_ptr).vprop[v_src].compliance)
+                    continue;
+            }
+            edges_to_add[v_dst] += 1;
+        }
+        for (auto &k: edges_to_add) {
+            // maybe problems if network_ptr is ever undirected
+            auto e_pair = (*network_ptr).add_edge(v_src, k.first);
+            Edge e = e_pair.first;
+
+            (*network_ptr).eprop[e].population = k.second;
+        }
     }
 
 private:

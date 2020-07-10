@@ -31,9 +31,26 @@ ed_soa_df = pd.read_csv('../data/raw/Joined_Pop_Data_CSO_NISRA.csv')
 # maps each ed to and soa to it's index in ed_soa_df
 ed_soa_id_map = {ed:x for ed, x in zip(ed_soa_df['Electoral Division'], ed_soa_df.index)}
 
+soa_counties = pd.read_csv('../data/raw/Geographic Data (statistical geographies).csv')
+soa_counties.index = soa_counties['SOA Code']
+
+ed_counties = pd.read_csv('../data/raw/ED_Basic_Info.csv')
+ed_counties.index = ed_counties['Electoral Division'].str.split(expand=True)[0]
+
+county_set = []
+county_set.extend(np.unique(ed_counties['COUNTY'].to_numpy()))
+county_dict = {x:y for x,y in zip(county_set, range(len(county_set)))}
+
+ed_soa_df.index = ed_soa_df['Electoral Division'].str.split(expand=True)[0]
+
+ed_soa_df['type'] = len(county_dict)
+for e in ed_counties.index:
+    ed_soa_df['type'][e] = county_dict[ed_counties['COUNTY'][e]]
+    
+
 vertices_df = pd.DataFrame(ed_soa_df)
 vertices_df = vertices_df.drop(['Electoral Division'], axis=1)
-vertices_df . columns = ['long', 'lat', 'population']
+vertices_df . columns = ['long', 'lat', 'population', 'type']
 
 from pyproj import Transformer
 transformer = Transformer.from_crs(2157, 4326, always_xy = True)
@@ -45,7 +62,7 @@ for pt in transformer.itransform(zip(vertices_df.long, vertices_df.lat)):
     lat_list.append(pt[1])
     
 vertices_df.long = long_list
-vertices_df.lat = lat_list
+vertices_df.lat = lat_list    
                                                          
 vertices_df.to_csv('../data/processed/ed_soa_vertices.csv', index = True)
 

@@ -105,6 +105,7 @@ int main() {
 
         for (int tau = 0; tau < duration; tau++, t++) {
 
+            std:: cout << t<< std::endl;
 
             epi_model.m_beta = beta;
             epi_model.m_mu = mu;
@@ -162,7 +163,6 @@ int main() {
                     t2 - t1);
             std::cout << time_span.count() << " seconds\n" << std::endl;
         }
-
     }
 
     std::cout << "Finished!" <<
