@@ -20,9 +20,10 @@ import geopandas as gpd
 from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
 
 ######################
-save_figs = True
+save_figs = False
 op_name = 'varied_mixing_x'
 annotate_events = False
+
 #####################
 years = mdates.YearLocator()   # every year
 months = mdates.MonthLocator()  # every month
@@ -30,9 +31,9 @@ years_fmt = mdates.DateFormatter('%Y')
 months_fmt = mdates.DateFormatter('%m')
     
 fig, ax = plt.subplots(1, 1)
-df = pd.read_csv("../2274_output.csv")
+df = pd.read_csv("../agg_output.csv")
 
-dates = [datetime.datetime(2020, 1, 22) + datetime.timedelta(days=x) for x in range(600)]
+dates = [datetime.datetime(2020, 1, 22) + datetime.timedelta(days=x) for x in range(400)]
 plt.plot(dates, df.S,c='tab:purple', label = 'S', alpha = 0.5)
 plt.plot(dates, df.R,c='tab:orange', label = 'R', alpha = 0.5)
 plt.plot(dates, df.I, c='tab:blue', label = 'I', alpha = 0.9)
@@ -42,11 +43,11 @@ plt.plot(dates, df.D, c='tab:red', label = 'D', alpha = 0.9)
 df = pd.read_csv("../22742_output.csv")
 
 
-plt.plot(dates, df.S.iloc[0:600], '--', c='tab:purple')
-plt.plot(dates, df.R.iloc[0:600],'--', c='tab:orange')
-plt.plot(dates, df.I.iloc[0:600],'--', c='tab:blue')
-plt.plot(dates, df.X.iloc[0:600],'--', c='tab:green')
-plt.plot(dates, df.D.iloc[0:600],'--', c='tab:red')
+plt.plot(dates, df.S.iloc[0:400], '--', c='tab:purple')
+plt.plot(dates, df.R.iloc[0:400],'--', c='tab:orange')
+plt.plot(dates, df.I.iloc[0:400],'--', c='tab:blue')
+plt.plot(dates, df.X.iloc[0:400],'--', c='tab:green')
+plt.plot(dates, df.D.iloc[0:400],'--', c='tab:red')
 
 ax.xaxis.set_major_locator(years)
 ax.xaxis.set_major_formatter(years_fmt)
@@ -55,7 +56,7 @@ ax.xaxis.set_minor_formatter(months_fmt)
 ax.tick_params(which='major', length=16)
 plt.setp(ax.xaxis.get_minorticklabels(), rotation=45)
 plt.legend()
-plt.savefig('compliance_diff_scale.png', bbox_inches='tight', dpi = 300)
+#plt.savefig('compliance_diff_scale.png', bbox_inches='tight', dpi = 300)
 #plt.yscale('log')
 
 #fig, ax = plt.subplots(1, 1, figsize = (16/3, 9/3))

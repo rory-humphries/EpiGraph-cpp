@@ -20,17 +20,18 @@ import geopandas as gpd
 from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
 
 ######################
-save_figs = True
-op_name = 'dynamic_lock_10_3'
+save_figs = False
+op_name = 'test'
 annotate_events = False
+dir_path = "../output/"
 #####################
 
 
 files = []
-for filename in os.listdir("../output/"):
+for filename in os.listdir(dir_path):
     files += [filename]
     
-data = pd.read_csv("../output/0.csv")
+num_ts = 400#len(files)
 
 s=[]
 i=[]
@@ -43,7 +44,7 @@ maxi = 0
 maxr = 0
 maxd = 0
 maxx = 0
-for filename in range(0, len(files)):
+for filename in range(0, num_ts):
     df = pd.read_csv("../output/"+str(filename)+".csv")
     maxs = max(maxs, max(df.S))
     maxi = max(maxi, max(df.I))
@@ -61,7 +62,9 @@ months = mdates.MonthLocator()  # every month
 years_fmt = mdates.DateFormatter('%Y')
 months_fmt = mdates.DateFormatter('%m')
 
-dates = [datetime.datetime(2020, 1, 22) + datetime.timedelta(days=x) for x in range(len(files))]
+start_date = datetime.datetime(2020, 1, 22)
+
+dates = [start_date + datetime.timedelta(days=x) for x in range(num_ts)]
 
 #fig, ax = plt.subplots(1, 1, figsize = (16/3, 9/3))
 fig, ax = plt.subplots(1, 1)
@@ -71,6 +74,21 @@ plt.plot(dates, r, label = 'R', c = 'tab:orange')
 plt.plot(dates, d, label = 'D', c = 'tab:red')
 plt.plot(dates, x, label = 'X', c = 'tab:green')
 
+event_durations = [50, 67, 21, 21, 21, 21, 21, 400]
+event_dates = [start_date]
+for x in event_durations:
+    event_dates.append(event_dates[-1] + datetime.timedelta(days=x))
+    
+shade_event_dates = event_dates[1:-1]
+num_shade_colors = len(shade_event_dates)
+
+colors = plt.cm.viridis(np.linspace(0,1,num_shade_colors))
+
+for i in range(len(shade_event_dates)-1):
+    d1 = shade_event_dates[i]
+    d2 = shade_event_dates[i+1]
+    plt.axvspan(d1, d2, color = colors[i], alpha=0.2)
+
 ax.xaxis.set_major_locator(years)
 ax.xaxis.set_major_formatter(years_fmt)
 ax.xaxis.set_minor_locator(months)
@@ -79,13 +97,17 @@ ax.tick_params(which='major', length=16)
 plt.setp(ax.xaxis.get_minorticklabels(), rotation=45)
 #plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
 
-#plt.xlabel('time (months)')
+plt.xlabel('Time [months]')
 plt.ylabel('No. of individuals')
 
-plt.ylim(1, 7000000)
+plt.ylim(1, 9000000)
 plt.yscale('log')
 plt.legend()
 
+if save_figs == True:
+    plt.savefig('doomsday', bbox_inches='tight', dpi = 300)
+
+"""
 
 if annotate_events == True:
     fs = 8
@@ -197,4 +219,4 @@ plt.ylabel('No. of individuals')
 if save_figs == True:
     plt.savefig(op_name + '_lin_scale.png', bbox_inches='tight', dpi = 300)
 
-
+"""

@@ -60,7 +60,7 @@ gdf.index = gdf_osied
 images = []
 for filename in range(1, len(files)):
     print(filename)
-    fig, ax = plt.subplots(1, 1, figsize = (10,10))
+    fig, ax = plt.subplots(1, 1, figsize = (7,7))
     df = pd.read_csv("../output/"+str(filename)+".csv")
     df.index = ed_info.index
     df = df.rename(index = new_index)
@@ -86,8 +86,8 @@ for filename in range(1, len(files)):
     plt.savefig(filename+'tmp.png')
     images.append(imageio.imread("tmp.png"))
     plt.show()
-imageio.mimsave('output.gif', images)
-
+#imageio.mimsave('output.gif', images)
+"""
 fig, ax = plt.subplots(1, 1, figsize = (10,10))
 df = pd.read_csv("../output/"+str(50)+".csv")
 df.index = ed_info.index
@@ -113,3 +113,4 @@ plt.axis('equal')
 plt.tight_layout()
 plt.savefig(filename+'tmp.png')
 plt.show()
+"""

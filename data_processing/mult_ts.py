@@ -21,40 +21,29 @@ from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
 
 ######################
 save_figs = True
-op_name = 'varied_mixing_x'
+op_name = '1000_lockdown'
 annotate_events = False
 #####################
-node = 0
-vals = [1, 0.9, 0.8, 0.7]
-lt = ['--', '-']
-at = [0.4, 1]
-#fig, ax = plt.subplots(1, 1, figsize = (16/3, 9/3))
+
+num_ts = 600#len(files)
+
 fig, ax = plt.subplots(1, 1)
-for dir in ['../scenarios/257_1_0', '../scenarios/dyn_lockdown_10_3']:
+lables = ['40%','80%']
+count = 0
+for direc in ['../../scenarios/compliance_0_4', '../../scenarios/compliance_0_8']:
     files = []
-    for filename in os.listdir(dir):
+    for filename in os.listdir(direc):
         files += [filename]
         
-    data = pd.read_csv(dir + "/0.csv")
     
     s=[]
     i=[]
     r=[]
     d=[]
     x=[]
-    
-    maxs = 0
-    maxi = 0
-    maxr = 0
-    maxd = 0
-    maxx = 0
-    for filename in range(0, len(files)):
-        df = pd.read_csv(dir + '/' + str(filename)+".csv")
-        maxs = max(maxs, max(df.S))
-        maxi = max(maxi, max(df.I))
-        maxr = max(maxr, max(df.R))
-        maxd = max(maxd, max(df.D))
-        maxx = max(maxx, max(df.X))
+
+    for filename in range(0, num_ts):
+        df = pd.read_csv(direc + '/' + str(filename)+".csv")
         s.append(sum(df.S))
         i.append(sum(df.I))
         r.append(sum(df.R))
@@ -66,22 +55,28 @@ for dir in ['../scenarios/257_1_0', '../scenarios/dyn_lockdown_10_3']:
     years_fmt = mdates.DateFormatter('%Y')
     months_fmt = mdates.DateFormatter('%m')
     
-    dates = [datetime.datetime(2020, 1, 22) + datetime.timedelta(days=x) for x in range(len(files))]
+    dates = [datetime.datetime(2020, 1, 22) + datetime.timedelta(days=x) for x in range(num_ts)]
+    #plt.plot(dates, s, label = 'S', c = 'tab:purple')
+    #plt.plot(dates, i, label = 'I', c = 'tab:blue')
+   # plt.plot(dates, i, label = lables[count])
+    #plt.plot(dates, d, label = 'D', c = 'tab:red')
+    #plt.plot(dates, x, label = 'X', c = 'tab:green')
+
     
-    if node == 0:
+    if count == 0:
         #plt.plot(dates, s, lt[node], c = 'tab:purple', alpha = at[node])
-        plt.plot(dates, i, lt[node], c = 'tab:blue', alpha = at[node])
-        plt.plot(dates, r, lt[node], c = 'tab:orange', alpha = at[node])
-        plt.plot(dates, d, lt[node], c = 'tab:red', alpha = at[node])
-        plt.plot(dates, x, lt[node], c = 'tab:green', alpha = at[node])
-    if node == 1:
+        plt.plot(dates, i, '--', c = 'tab:blue', alpha = 0.4)
+        plt.plot(dates, r, '--', c = 'tab:orange', alpha = 0.4)
+        plt.plot(dates, d, '--', c = 'tab:red', alpha = 0.4)
+        plt.plot(dates, x, '--', c = 'tab:green', alpha = 0.4)
+    if count == 1:
         #plt.plot(dates, s, lt[node], label = 'S', c = 'tab:purple',  alpha = at[node])
-        plt.plot(dates, i, lt[node], label = 'I', c = 'tab:blue', alpha = at[node])
-        plt.plot(dates, r, lt[node], label = 'R', c = 'tab:orange', alpha = at[node])
-        plt.plot(dates, d, lt[node], label = 'D', c = 'tab:red', alpha = at[node])
-        plt.plot(dates, x, lt[node], label = 'X', c = 'tab:green', alpha = at[node])
+        plt.plot(dates, i, label = 'I', c = 'tab:blue')
+        plt.plot(dates, r, label = 'R', c = 'tab:orange')
+        plt.plot(dates, d, label = 'D', c = 'tab:red')
+        plt.plot(dates, x, label = 'X', c = 'tab:green')
     
-    node += 1
+    count+=1
 ax.xaxis.set_major_locator(years)
 ax.xaxis.set_major_formatter(years_fmt)
 ax.xaxis.set_minor_locator(months)
@@ -90,7 +85,7 @@ ax.tick_params(which='major', length=16)
 plt.setp(ax.xaxis.get_minorticklabels(), rotation=45)
 plt.legend(loc = 0)
 plt.yscale('log')
-plt.ylim(1,(50e6))
+plt.ylim(1,900000)
     
     
 
@@ -98,11 +93,15 @@ plt.ylim(1,(50e6))
     
     #plt.xlabel('time (months)')
 plt.ylabel('No. of individuals')
+plt.xlabel('Time [months]')
+
     
+
     
 if save_figs == True:
-    plt.savefig(op_name + '_log_scale.png', bbox_inches='tight', dpi = 300)
-    
+    plt.savefig('varied_compliance.png', bbox_inches='tight', dpi = 300)
+
+""" 
 node = 0
 lt = ['-', '-', '-', '-', '-']
 at = [1, 1, 1, 1, 1]
@@ -248,3 +247,4 @@ if save_figs == True:
     plt.savefig(op_name + '_lin_scale.png', bbox_inches='tight', dpi = 300)
 
 
+"""

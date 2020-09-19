@@ -2,3 +2,4 @@ cmake*/
 .*
 output
 gifs/
+data/processed/*

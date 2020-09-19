@@ -31,9 +31,26 @@ ed_soa_df = pd.read_csv('../data/raw/Joined_Pop_Data_CSO_NISRA.csv')
 # maps each ed to and soa to it's index in ed_soa_df
 ed_soa_id_map = {ed:x for ed, x in zip(ed_soa_df['Electoral Division'], ed_soa_df.index)}
 
+soa_counties = pd.read_csv('../data/raw/Geographic Data (statistical geographies).csv')
+soa_counties.index = soa_counties['SOA Code']
+
+ed_counties = pd.read_csv('../data/raw/ED_Basic_Info.csv')
+ed_counties.index = ed_counties['Electoral Division'].str.split(expand=True)[0]
+
+county_set = []
+county_set.extend(np.unique(ed_counties['COUNTY'].to_numpy()))
+county_dict = {x:y for x,y in zip(county_set, range(len(county_set)))}
+
+ed_soa_df.index = ed_soa_df['Electoral Division'].str.split(expand=True)[0]
+
+ed_soa_df['type'] = len(county_dict)
+for e in ed_counties.index:
+    ed_soa_df['type'][e] = county_dict[ed_counties['COUNTY'][e]]
+    
+
 vertices_df = pd.DataFrame(ed_soa_df)
 vertices_df = vertices_df.drop(['Electoral Division'], axis=1)
-vertices_df . columns = ['long', 'lat', 'population']
+vertices_df . columns = ['long', 'lat', 'population', 'type']
 
 from pyproj import Transformer
 transformer = Transformer.from_crs(2157, 4326, always_xy = True)
@@ -45,7 +62,7 @@ for pt in transformer.itransform(zip(vertices_df.long, vertices_df.lat)):
     lat_list.append(pt[1])
     
 vertices_df.long = long_list
-vertices_df.lat = lat_list
+vertices_df.lat = lat_list    
                                                          
 vertices_df.to_csv('../data/processed/ed_soa_vertices.csv', index = True)
 
@@ -82,7 +99,7 @@ for i,j in ed_dist.items():
     dist.append(i)
     probs.append(j)
     
-distance_distribution = pd.DataFrame({'distance':dist, 'probability':probs})
+distance_distribution = pd.DataFrame({'value':dist, 'probability':probs})
 
 distance_distribution.to_csv('../data/processed/ed_distance_probs.csv', index = False)
 
@@ -94,7 +111,7 @@ bin_indices = np.digitize(ed_df['No. of Commuters'].to_numpy()/ed_df.Population.
 bin_count = np.bincount(bin_indices)
 probs = bin_count/np.sum(bin_count)
 
-commuter_distribution = pd.DataFrame({'commuter_proportion':bins[:len(probs)], 'probability':probs})
+commuter_distribution = pd.DataFrame({'value':bins[:len(probs)], 'probability':probs})
 commuter_distribution.to_csv('../data/processed/ed_commuter_probs.csv', index = False)
 
 
@@ -103,13 +120,44 @@ Output the matrix which gives the probaility of a vertex travelling to another b
 on the dostribution of travel distances from electoral divisions
 """
 
-dist_probs_map = {x:y for x,y in zip(distance_distribution.distance, distance_distribution.probability)}
-for u in range(500):
-    if u not in dist_probs_map.keys():
-        dist_probs_map[u]=0
-        
+bands = pd.read_csv("../data/raw/Distance_Distribution_by_Ratio.csv")
+
+bands_dic = {x.split('-')[-1].strip():np.zeros(550) for x in bands["Ratio Band"]}
+bands_dic = {x.split('-')[-1].strip():np.zeros(550) for x in bands["Ratio Band"]}
+
+for b, d, p in zip(bands["Ratio Band"], bands["Distance"], bands["Prob"]):
+    bands_dic[b.split('-')[-1].strip()][int(d)] = p
+    
+for k in bands_dic.keys():
+    prev = 0
+    for i, val in enumerate(bands_dic[k]):
+        if val == 0:
+            bands_dic[k][i] = prev
+        else:
+            prev = val
+
+ratios = np.array([0.1, 1, 3800])
+ratios_str = np.array(['0.1', '1', '3800'])
+pop_list = vertices_df.population.to_numpy()
 vertex_travel_mat = np.zeros((len(vertices_df.index), len(vertices_df.index)))
 
+for src in range(len(vertices_df.index)):
+    print(src)
+    for dst in range(len(vertices_df.index)):
+        if src == dst:
+            continue
+        else:
+            ratio = pop_list[src]/pop_list[dst]
+            ratio = ratios_str[np.searchsorted(ratios, ratio, 'left')]
+    
+            d = int(distance_haversine(lat_list[src], long_list[src], 
+                                       lat_list[dst], long_list[dst])/1000.0)
+            
+            #d = bands_dic[ratio][d]
+            
+            vertex_travel_mat[src][dst] = bands_dic[ratio][d]
+
+np.savetxt('../data/processed/ed_soa_travel_prob_mat_ratio_bands.csv', vertex_travel_mat, delimiter=',', fmt = '%f')
 
 def radians(x):
     return x*np.pi/180.0
@@ -133,6 +181,12 @@ def distance_haversine(lat1, lon1, lat2, lon2):
 
     return distance
 
+dist_probs_map = {x:y for x,y in zip(distance_distribution.distance, distance_distribution.probability)}
+for u in range(500):
+    if u not in dist_probs_map.keys():
+        dist_probs_map[u]=0
+        
+vertex_travel_mat = np.zeros((len(vertices_df.index), len(vertices_df.index)))
 
 for src in vertices_df.index:
     #print(src)
