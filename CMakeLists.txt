@@ -3,7 +3,7 @@ project(EpiGraph)
 
 set(CMAKE_CXX_STANDARD 14)
 
-
+include_directories("/usr/include/eigen3/")
 
 add_executable(MultiPhase     include/sixrd_model.h include/distributions.h include/csv.h src/distributions.cpp include/spatial_util.h include/io.h include/travel_model.h src/multi_phase.cpp include/eigen_util.h)
 add_executable(VertexLockDown include/sixrd_model.h include/distributions.h include/csv.h src/distributions.cpp include/spatial_util.h include/io.h include/travel_model.h src/vertex_dyn_lockdown.cpp)

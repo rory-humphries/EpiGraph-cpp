@@ -9,8 +9,8 @@
 #include <random>
 #include <memory>
 #include <algorithm>
-#include <eigen3/Eigen/Sparse>
-#include <eigen3/Eigen/Dense>
+#include <Eigen/Sparse>
+#include <Eigen/Dense>
 
 #include "distributions.h"
 #include "io.h"
