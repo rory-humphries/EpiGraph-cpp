@@ -8,75 +8,90 @@
 #include <vector>
 #include <random>
 #include <memory>
-#include "distributions.h"
-#include "meta_pop_network.h"
-#include "io.h"
-#include "spatial_utils.h"
+#include <algorithm>
+#include <eigen3/Eigen/Sparse>
+#include <eigen3/Eigen/Dense>
 
-template<typename TNetwork>
-class RandomTravelModel {
+#include "distributions.h"
+#include "io.h"
+#include "spatial_util.h"
+
+using smat = Eigen::SparseMatrix<double>;
+using dmat = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>;
+
+class RandomTravelModelMat {
+private:
+    size_t dim;
+
+    double m_compliance;
+    double m_max_dist;
+
+    std::vector<std::discrete_distribution<int>> travel_probs;
+
+public:
+    ProbDist commuter_dist;
+    ProbDist travel_dist;
+
 public:
 
-    RandomTravelModel() : commuter_dist(), travel_dist(), m_compliance(0), m_max_dist(0) {}
-    RandomTravelModel(std::string commuter_dist_path, std::string travel_dist_path) :
-            commuter_dist(ProbDist_from_csv(commuter_dist_path)),
-            travel_dist(ProbDist_from_csv(travel_dist_path))  {}
-
-    // setters
-    auto set_network(TNetwork& g) -> void {
-        network_ptr = &g;
-    }
-    auto set_compliance(double compliance) -> void {
-        m_compliance = compliance;
-    }
-    auto set_max_dist(double max_dist) -> void {
-        m_max_dist = max_dist;
-    }
+    RandomTravelModelMat(size_t dim) : dim(dim), travel_probs(dim), commuter_dist(), travel_dist(), m_compliance(0),
+                                       m_max_dist(0) {}
 
     // getters
     auto get_compliance(double compliance) -> double {
-        return m_compliance ;
+        return m_compliance;
     }
+
     auto get_max_dist(double max_dist) -> double {
         return m_max_dist;
     }
 
-    auto travel_probabilities(Vertex v_src, bool normalise = true) -> std::vector<double> {
-        /*
-         * Return the probabilities that given an individual is travelling they go to vertex v_dst.
-         * The index of the returned vector corresponds to the vertex v_dst, i.e. vector[v_dst] is the probability
-         * of travelling to v_dst from v_src.
-         *
-         * Note: The probabilites do not sum to 1,
-         */
-        std::vector<double> probs;
-        probs.reserve((*network_ptr).num_vertices());
-
-        double sum_total = 0;
-        for (Vertex v_dst = 0; v_dst < (*network_ptr).num_vertices(); v_dst++) {
-            double lon1 = 0, lon2 = 0, lat1 = 0, lat2 = 0;
-            std::tie(lon1, lat1) = (*network_ptr).vprop[v_src].position;
-            std::tie(lon2, lat2) = (*network_ptr).vprop[v_dst].position;
-            double d = long_lat_distance(lon1, lat1, lon2, lat2)/1000.0;
-            double tmp = travel_dist.get_prob(d);
-
-            if (d > 0) { // if the distance is 0 then there is no circle
-                //tmp /= 2*3.14*d; // divide by the circumference of the circle that v_dst lies on (possibly weight by population in the future)
-                tmp;
-                // TODO: the number of nodes that are a distance d away is not 2*pi*r, will probably have to do some sort of binning of the data.
-            }
-
-            tmp *= (*network_ptr).vprop[v_dst].population;
-            sum_total += tmp;
-            probs.push_back(tmp);
-        }
-        if (normalise){
-            std::transform(probs.begin(), probs.end(), probs.begin(), [sum_total](double d) -> double {return d/sum_total;});
-        }
-        return probs;
+    // setters
+    auto set_compliance(double compliance) -> void {
+        m_compliance = compliance;
     }
-    template<typename RandomGenerator>
-    auto add_out_travels(Vertex v_src, RandomGenerator& travel_distribution) -> void {
+
+    auto set_max_distance(double max_dist) -> void {
+        m_max_dist = max_dist;
+    }
+
+    auto set_commuter_dist(ProbDist commuter_dist) -> void {
+        this->commuter_dist = commuter_dist;
+    }
+
+    template<typename TIter>
+    auto set_travel_probs(size_t i, TIter begin, TIter end) -> void {
+        // stores the probability distributions of a traveller going to a destination vertex given the traveller is
+        // leaving from vertex v_src. The index of the vector correspond to the vertices of the same index. i.e. vec[v_src]
+
+        if (std::distance(begin, end) != dim)
+            throw std::invalid_argument("Iterator length does not match dimension of model");
+        if (i > dim)
+            throw std::invalid_argument("Index greater than dimension of model");
+
+        travel_probs[i] = std::discrete_distribution<int>(begin, end);
+    }
+    auto set_travel_probs(std::string path_to_csv) {
+        size_t i = 0;
+        std::ifstream infile(path_to_csv);
+        std::string line;
+        while (getline(infile, line, '\n')) {
+            std::vector<double> tmp;
+            std::istringstream ss(line);
+            std::string token;
+
+            while (std::getline(ss, token, ',')) {
+                tmp.push_back(stof(token));
+            }
+            set_travel_probs(i, tmp.begin(), tmp.end());
+            i++;
+        }
+    }
+
+
+    template<typename Derived, typename DerivedB, typename DerivedC>
+    auto add_out_travels(Eigen::SparseMatrix<Derived> &adj, Eigen::MatrixBase<DerivedB> &pos_map,
+                         Eigen::MatrixBase<DerivedC> &pop_map) -> void {
         /*
          * Add random edges to the network with a random number of travellers along each edge. The total number of
          * travelers out of v_src is decided by the commuter_dist distribution which gives the proportion of the
@@ -86,110 +101,46 @@ public:
          * outputs a destination vertex.
          */
 
+        int tot_pop = pop_map.sum();
+
+        //Eigen::SparseMatrix<double> adj_tmp(pop_map.size(), pop_map.size());
         std::uniform_real_distribution<> uni_dist(0, 1);
 
-        // get the number of people travelling
-        double travel_prop = commuter_dist(global_engine());
-        int N = (*network_ptr).vprop[v_src].population * travel_prop;
+        typedef Eigen::Triplet<double> T;
+        std::vector<T> tripletList;
+        tripletList.reserve(tot_pop);
+        std::map<std::pair<int, int>, double> edges_to_add;
 
+        for (int i = 0; i < dim; i++) {
+            std::discrete_distribution<int> &travel_distribution = travel_probs[i];
 
-        std::map<Vertex, double> edges_to_add;
-        for (int n = 0; n < N; n++) {
+            // get the number of people travelling
+            double travel_prop = commuter_dist(global_engine());
+            int N = pop_map[i] * travel_prop;
 
-            // find the destination vertex from the travel distribution
-            Vertex v_dst = travel_distribution(global_engine());
-            if (v_dst == v_src)
-                continue;
+            for (int n = 0; n < N; n++) {
 
-            // if distance is greater than max distance only non compliant will travel
-            double lon1 = 0, lon2 = 0, lat1 = 0, lat2 = 0;
-            std::tie(lon1, lat1) = (*network_ptr).vprop[v_src].position;
-            std::tie(lon2, lat2) = (*network_ptr).vprop[v_dst].position;
+                // find the destination vertex from the travel distribution
+                int j = travel_distribution(global_engine());
 
-            if (long_lat_distance(lon1, lat1, lon2, lat2)/1000.0 >= m_max_dist) {
-                double u = uni_dist(global_engine());
-                if (u >= m_compliance)
-                    continue;
+                // if distance is greater than max distance only non compliant will travel
+                double lon1 = pos_map(i, 0), lon2 = pos_map(j, 0), lat1 = pos_map(i, 1), lat2 = pos_map(j, 1);
+
+                if (long_lat_distance(lon1, lat1, lon2, lat2) / 1000.0 >= m_max_dist) {
+                    double u = uni_dist(global_engine());
+                    if (u >= m_compliance) {
+                        tripletList.emplace_back(i, j, 1);
+                    }
+                } else {
+                    tripletList.emplace_back(i, j, 1);
+                }
             }
-            edges_to_add[v_dst] += 1;
         }
-        for (auto &k: edges_to_add) {
-            // maybe problems if network_ptr is ever undirected
-            auto e_pair = (*network_ptr).add_edge(v_src, k.first);
-            Edge e = e_pair.first;
 
-            (*network_ptr).eprop[e].population = k.second;
-        }
-    }
-    auto add_out_travels(Vertex v_src) -> void {
-        /*
-          * Add random edges to the network with a random number of travellers along each edge. The total number of
-          * travellers out of v_src is decided by the commuter_dist distribution which gives the proportion of the
-          * total population in v_src that will travel.
-          *
-          * The probabilities are recomputed on every call. If the network is small enough the probabilities should be
-          * stored and passed explicitly.
-          */
-        auto probs = travel_probabilities(v_src, false);
-        std::discrete_distribution<> travel_distribution(probs.begin(), probs.end());
-
-        add_out_travels(v_src, travel_distribution);
-    }
-    template<typename RandomGenerator>
-    auto add_out_travels_per_vertex(Vertex v_src, RandomGenerator& travel_distribution) -> void {
-        /*
-         * Add random edges to the network with a random number of travellers along each edge. The total number of
-         * travelers out of v_src is decided by the commuter_dist distribution which gives the proportion of the
-         * total population in v_src that will travel.
-         *
-         * travel distribution is a random distribution that supports the operator() which take a random generator and
-         * outputs a destination vertex.
-         */
-
-        std::uniform_real_distribution<> uni_dist(0, 1);
-
-        // get the number of people travelling
-        double travel_prop = commuter_dist(global_engine());
-        int N = (*network_ptr).vprop[v_src].population * travel_prop;
-
-
-        std::map<Vertex, double> edges_to_add;
-        for (int n = 0; n < N; n++) {
-
-            // find the destination vertex from the travel distribution
-            Vertex v_dst = travel_distribution(global_engine());
-            if (v_dst == v_src)
-                continue;
-
-            // if distance is greater than max distance only non compliant will travel
-            double lon1 = 0, lon2 = 0, lat1 = 0, lat2 = 0;
-            std::tie(lon1, lat1) = (*network_ptr).vprop[v_src].position;
-            std::tie(lon2, lat2) = (*network_ptr).vprop[v_dst].position;
-
-            if (long_lat_distance(lon1, lat1, lon2, lat2)/1000.0 >= (*network_ptr).vprop[v_src].max_dist) {
-                double u = uni_dist(global_engine());
-                if (u >= (*network_ptr).vprop[v_src].compliance)
-                    continue;
-            }
-            edges_to_add[v_dst] += 1;
-        }
-        for (auto &k: edges_to_add) {
-            // maybe problems if network_ptr is ever undirected
-            auto e_pair = (*network_ptr).add_edge(v_src, k.first);
-            Edge e = e_pair.first;
-
-            (*network_ptr).eprop[e].population = k.second;
-        }
+        adj.setFromTriplets(tripletList.begin(), tripletList.end());
+        adj.makeCompressed();
     }
 
-private:
-    double m_compliance;
-    double m_max_dist;
-
-    TNetwork* network_ptr;
-public:
-    ProbDist commuter_dist;
-    ProbDist travel_dist;
 };
 
 

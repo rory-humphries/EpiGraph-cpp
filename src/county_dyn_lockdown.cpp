@@ -83,6 +83,7 @@ int main() {
     // responsible for adding edges/travellers to the network
     TravelModel rnd_travel;
     rnd_travel.set_network(net);
+    rnd_travel.travel_dist = ProbDist_from_csv(distance_distribution);
     rnd_travel.commuter_dist = ProbDist_from_csv(commuter_distribution);
 
 
@@ -146,6 +147,7 @@ int main() {
             isums.resize(net.vprop[v].type+1);
         }
         nsums.at(net.vprop[v].type) += net.vprop[v].population;
+        isums.at(net.vprop[v].type) = 0;
     }
     int t = 0;
     for (t = 0; t < 1000; t++) {
@@ -155,7 +157,7 @@ int main() {
             // update the duration which the vertex is left in phase x.
             // if the phase is changed update the parameters.
             if (net.vprop[v].duration == 0) {
-                if(net.vprop[v].phase >= 2 && isums[v]/nsums[v] > 0.01) {
+                if(net.vprop[v].phase >= 2 && isums.at(net.vprop[v].phase)/nsums.at(net.vprop[v].phase) > 0.001) {
                     net.vprop[v].phase = 2;
                 } else if (params.size() - 1 < net.vprop[v].phase + 1) {
                     net.vprop[v].phase = params.size() - 1;
@@ -174,12 +176,26 @@ int main() {
                 net.vprop[v].max_dist = params.at(current_phase).at("max_dist");
                 net.vprop[v].compliance = params.at(current_phase).at("compliance");
             } else {
-                net.vprop[v].duration--;
+                if(net.vprop[v].phase >= 2 && isums.at(net.vprop[v].phase)/nsums.at(net.vprop[v].phase) > 0.001) {
+                    net.vprop[v].phase = 2;
+
+                    int current_phase = net.vprop[v].phase;
+
+                    net.vprop[v].duration = params.at(current_phase).at("duration");
+
+                    net.vprop[v].beta = params.at(current_phase).at("beta");
+                    net.vprop[v].mu = params.at(current_phase).at("mu");
+                    net.vprop[v].alpha = params.at(current_phase).at("alpha");
+                    net.vprop[v].kappa = params.at(current_phase).at("kappa");
+                    net.vprop[v].c = params.at(current_phase).at("c");
+                    net.vprop[v].max_dist = params.at(current_phase).at("max_dist");
+                    net.vprop[v].compliance = params.at(current_phase).at("compliance");
+                } else {
+                    net.vprop[v].duration--;
+                }
             }
         }
 
-
-        std::vector<double> isums(0, 40);
 
         std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
 
@@ -207,7 +223,7 @@ int main() {
         for (auto &k: isums)
             k = 0;
         for (Vertex v = 0; v < net.num_vertices(); v++) {
-            isums[net.vprop[v].type] += state[v][1];
+            isums.at(net.vprop[v].type) += state[v][1];
         }
 
 
@@ -221,7 +237,8 @@ int main() {
 
         // output results to csv
         if (full_output)
-            epi_model.write_state(state, std::to_string(t), full_output_path);
+            epi_model.write_type_totals(state, std::to_string(t), full_output_path);
+            //epi_model.write_state(state, std::to_string(t), full_output_path);
         if (agg_output)
             epi_model.write_compartment_totals(state, agg_output_path, true);
 

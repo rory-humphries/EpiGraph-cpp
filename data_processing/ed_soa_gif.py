@@ -91,31 +91,37 @@ maxr = 0
 maxd = 0
 maxx = 0
 mini = 1
-for filename in range(1, len(files)):
+for filename in range(1, 500):
     df = pd.read_csv(direc+str(filename)+".csv")
     maxs = max(maxs, max(df.S))
-    maxi = max(maxi, max(df.I.to_numpy()/(df.S.to_numpy()+df.I.to_numpy()+df.X.to_numpy()+df.R.to_numpy()+df.D.to_numpy())))
+    maxi = max(maxi, max(df.I.to_numpy()/area))
     maxr = max(maxr, max(df.R))
     maxd = max(maxd, max(df.D))
     maxx = max(maxx, max(df.X))
     
 
 images = []
-for filename in range(1, len(files)):
+for filename in range(1, 500):
     print(filename)
-    fig, ax = plt.subplots(1, 1, figsize = (10,10))
+    fig, ax = plt.subplots(1, 1, figsize = (5,5))
     df = pd.read_csv(direc+str(filename)+".csv")
    
     N = df.S.to_numpy()+df.I.to_numpy()+df.X.to_numpy()+df.R.to_numpy()+df.D.to_numpy()
-    ed_soa_gdf['I'] = 0.1
-    ed_soa_gdf['I'] = 100000*df.I.to_numpy()/N
+    ed_soa_gdf['flag'] = 1
+    ed_soa_gdf['I'] = df.I.to_numpy()/area
     
-    lognorm = matplotlib.colors.LogNorm(1, 100000*maxi)
+    #ed_soa_gdf['flag'][ed_soa_gdf['I']<5] = 0
+    #ed_soa_gdf['I'] *= 100000/N
+    
+    #ed_soa_gdf['I'][ed_soa_gdf['flag'] == 0] = 1
+        
+    
+    lognorm = matplotlib.colors.LogNorm(0.0001, maxi)
     #lognorm = matplotlib.colors.Normalize(0, 100000*maxi)
 
 
     #ax2=ed_soa_gdf.plot(ax=ax, linewidth=0.0001, column = 'I', cmap = plt.get_cmap('YlOrRd', len(bounds)), norm=lognorm, legend = False)
-    ax2=ed_soa_gdf.plot(ax=ax, linewidth=0.0001, column = 'I', cmap = plt.get_cmap('inferno_r'), norm=lognorm, legend = False)
+    ax2=ed_soa_gdf.plot(ax=ax, linewidth=0.0001, column = 'I', cmap = plt.get_cmap('YlOrRd'), norm=lognorm, legend = False)
     patches = ax2.collections[0]
     cbar = plt.colorbar(patches, ax=ax2, extend='max')
     cbar.ax.set_ylabel('No. of infected per km sq', fontsize = 15)
@@ -132,32 +138,5 @@ for filename in range(1, len(files)):
 imageio.mimsave('output.gif', images)
 
 
-
-day = 50
-fig, ax = plt.subplots(1, 1, figsize = (10,10))
-df = pd.read_csv(direc+ str(day) +".csv")
-   
-
-ed_soa_gdf['I'] = 0.1
-ed_soa_gdf['I'] = df.I.to_numpy()/area
-
-lognorm = matplotlib.colors.LogNorm(0.00001, maxi)
-#lognorm = matplotlib.colors.Normalize(0.00001, maxi)
-
-
-ax2=ed_soa_gdf.plot(ax=ax, linewidth=0.0001, column = 'I', norm=lognorm, legend = False)
-patches = ax2.collections[0]
-cbar = plt.colorbar(patches, ax=ax2, extend='min')
-cbar.ax.set_ylabel('No. of infected per km sq', fontsize = 15)
-cbar.ax.tick_params(labelsize=15) 
-
-
-plt.title('Day ' + str(day), fontsize = 15)
-plt.axis('off')
-plt.axis('equal')
-plt.tight_layout()
-plt.savefig('tmp.png')
-images.append(imageio.imread("tmp.png"))
-plt.show()
 
 

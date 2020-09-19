@@ -20,8 +20,8 @@ import geopandas as gpd
 from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
 
 ######################
-save_figs = True
-op_name = 'dynamic_lock_10_3'
+save_figs = False
+op_name = 'test'
 annotate_events = False
 dir_path = "../output/"
 #####################
@@ -31,7 +31,7 @@ files = []
 for filename in os.listdir(dir_path):
     files += [filename]
     
-num_ts = 500#len(files)
+num_ts = 400#len(files)
 
 s=[]
 i=[]
@@ -97,7 +97,7 @@ ax.tick_params(which='major', length=16)
 plt.setp(ax.xaxis.get_minorticklabels(), rotation=45)
 #plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
 
-#plt.xlabel('time (months)')
+plt.xlabel('Time [months]')
 plt.ylabel('No. of individuals')
 
 plt.ylim(1, 9000000)
@@ -105,7 +105,7 @@ plt.yscale('log')
 plt.legend()
 
 if save_figs == True:
-    plt.savefig(op_name + '_log_scale.png', bbox_inches='tight', dpi = 300)
+    plt.savefig('doomsday', bbox_inches='tight', dpi = 300)
 
 """
 

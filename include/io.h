@@ -8,6 +8,42 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
+#include <Eigen/Core>
+#include "eigen_util.h"
+
+template<typename Derived>
+auto write_vector(Eigen::MatrixBase<Derived> vec, std::string fpath) -> void{
+    /*
+     * Writes a column vector to csv.
+     */
+
+    col_vector_assert(vec);
+
+    std::ofstream myfile;
+    myfile.open (fpath + ".csv");
+
+    for (int i = 0; i<vec.rows()-1;i++) {
+        myfile << vec[i];
+        myfile << ",";
+    }
+    myfile << vec[vec.rows()-1];
+}
+
+template<typename T>
+auto write_vector(std::vector<T> vec, std::string fpath) -> void{
+    /*
+     * Writes a column vector to csv.
+     */
+
+    std::ofstream myfile;
+    myfile.open (fpath + ".csv");
+
+    for (int i = 0; i<vec.size()-1;i++) {
+        myfile << vec[i];
+        myfile << ",";
+    }
+    myfile << vec[vec.size()-1];
+}
 
 auto matrix_from_csv(std::string path_to_file) -> std::vector<std::vector<double>> {
     std::ifstream myfile;

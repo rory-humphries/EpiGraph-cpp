@@ -3,10 +3,19 @@ project(EpiGraph)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(MultiPhase     include/edge.h include/sixrd_model.h include/graph.h include/distributions.h include/csv.h src/distributions.cpp include/spatial_utils.h include/meta_pop_network.h include/io.h include/travel_model.h src/multi_phase.cpp)
-add_executable(VertexLockDown include/edge.h include/sixrd_model.h include/graph.h include/distributions.h include/csv.h src/distributions.cpp include/spatial_utils.h include/meta_pop_network.h include/io.h include/travel_model.h src/vertex_dyn_lockdown.cpp)
-add_executable(CountyLockDown include/edge.h include/sixrd_model.h include/graph.h include/distributions.h include/csv.h src/distributions.cpp include/spatial_utils.h include/meta_pop_network.h include/io.h include/travel_model.h src/county_dyn_lockdown.cpp)
 
+
+add_executable(MultiPhase     include/sixrd_model.h include/distributions.h include/csv.h src/distributions.cpp include/spatial_util.h include/io.h include/travel_model.h src/multi_phase.cpp include/eigen_util.h)
+add_executable(VertexLockDown include/sixrd_model.h include/distributions.h include/csv.h src/distributions.cpp include/spatial_util.h include/io.h include/travel_model.h src/vertex_dyn_lockdown.cpp)
+add_executable(CountyLockDown include/sixrd_model.h include/distributions.h include/csv.h src/distributions.cpp include/spatial_util.h include/io.h include/travel_model.h src/county_dyn_lockdown.cpp)
+
+find_package (Eigen3 REQUIRED NO_MODULE)
+target_link_libraries (MultiPhase Eigen3::Eigen)
+
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(MultiPhase OpenMP::OpenMP_CXX )
+endif()
 
 find_package(OpenMP)
 if (OPENMP_FOUND)
@@ -14,3 +23,4 @@ if (OPENMP_FOUND)
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
     set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
+

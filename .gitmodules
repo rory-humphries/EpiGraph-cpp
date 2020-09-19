@@ -1,3 +1,6 @@
 [submodule "include/toml11"]
 	path = include/toml11
 	url = https://github.com/ToruNiina/toml11.git
+[submodule "include/spectra"]
+	path = include/spectra
+	url = https://github.com/yixuan/spectra.git
