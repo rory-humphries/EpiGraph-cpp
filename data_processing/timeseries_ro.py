@@ -32,7 +32,7 @@ files = []
 for filename in os.listdir(dir_path):
     files += [filename]
     
-num_ts = 400#len(files)
+num_ts = 1000  # len(files)
 
 s=[]
 i=[]
@@ -69,7 +69,7 @@ dates = [start_date + datetime.timedelta(days=x) for x in range(num_ts)]
 
 #fig, ax = plt.subplots(1, 1, figsize = (16/3, 9/3))
 fig, ax = plt.subplots(1, 1)
-l1=plt.plot(dates, s, label = 'S', c = 'tab:purple')
+#l1=plt.plot(dates, s, label = 'S', c = 'tab:purple')
 l2=plt.plot(dates, i, label = 'I', c = 'tab:blue')
 l3=plt.plot(dates, r, label = 'R', c = 'tab:orange')
 l4=plt.plot(dates, d, label = 'D', c = 'tab:red')
@@ -86,20 +86,17 @@ num_shade_colors = len(shade_event_dates)
 
 colors = plt.cm.viridis(np.linspace(0,1,num_shade_colors))
 
-for i in range(len(shade_event_dates)-1):
+for i in range(len(shade_event_dates) - 1):
     d1 = shade_event_dates[i]
-    d2 = shade_event_dates[i+1]
-    plt.axvspan(d1, d2, color = colors[i], alpha=0.2)
-
-
+    d2 = shade_event_dates[i + 1]
+    plt.axvspan(d1, d2, color=colors[i], alpha=0.2)
 
 ax.set_xlabel('Time [months]')
 ax.set_ylabel('No. of individuals')
 
-plt.ylim(1, 9000000)
-plt.yscale('log')
+# plt.ylim(1, 9000000)
+# plt.yscale('log')
 plt.legend()
-
 
 ax2 = ax.twinx()  # instantiate a second axes that shares the same x-axis
 
@@ -111,9 +108,9 @@ ax2.tick_params(which='major', length=16)
 plt.setp(ax.xaxis.get_minorticklabels(), rotation=45)
 #plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
 ax2.set_ylabel(r'$R_0$')  # we already handled the x-label with ax1
-l6 = ax2.plot(dates, R0[:num_ts],'k--', label = r'$R_0$')
+l6 = ax2.plot(dates, R0[:num_ts], 'k--', label=r'$R_0$', alpha=0.2)
 # added these three lines
-lns = l1+l2+l3+l4+l5+l6
+lns = l2 + l3 + l4 + l5 + l6
 labs = [l.get_label() for l in lns]
 ax.legend(lns, labs, loc=1)
 #ax2.tick_params(axis='y', labelcolor=color)

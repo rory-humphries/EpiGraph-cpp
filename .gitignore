@@ -1,5 +1,6 @@
 cmake*/
 .*
-output
+output/
 gifs/
 data/processed/*
+*.csv

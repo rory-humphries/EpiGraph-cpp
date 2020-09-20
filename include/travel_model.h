@@ -16,10 +16,7 @@
 #include "io.h"
 #include "spatial_util.h"
 
-using smat = Eigen::SparseMatrix<double>;
-using dmat = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>;
-
-class RandomTravelModelMat {
+class RandomTravelModel {
 private:
     size_t dim;
 
@@ -34,8 +31,8 @@ public:
 
 public:
 
-    RandomTravelModelMat(size_t dim) : dim(dim), travel_probs(dim), commuter_dist(), travel_dist(), m_compliance(0),
-                                       m_max_dist(0) {}
+    RandomTravelModel(size_t dim) : dim(dim), travel_probs(dim), commuter_dist(), travel_dist(), m_compliance(0),
+                                    m_max_dist(0) {}
 
     // getters
     auto get_compliance(double compliance) -> double {

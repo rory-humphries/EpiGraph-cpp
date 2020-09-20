@@ -7,7 +7,7 @@
 #include <chrono>
 
 
-using TravelModel = RandomTravelModelMat;
+using TravelModel = RandomTravelModel;
 
 int main() {
 
@@ -25,7 +25,7 @@ int main() {
     std::string full_output_path = toml::find<std::string>(config, "output", "full_path");
     std::string R0_path = toml::find<std::string>(config, "output", "R0_path");
 
-    int dim=0;
+    int dim = 0;
     std::ifstream file(vertex_data);
     std::string line;
     while (getline(file, line))
@@ -43,8 +43,8 @@ int main() {
     int i = 0;
     while (in.read_row(lon, lat, population)) {
         pop_vec[i] = population;
-        pos_mat(i,0) = lon;
-        pos_mat(i,1) = lat;
+        pos_mat(i, 0) = lon;
+        pos_mat(i, 1) = lat;
 
         i++;
     }
@@ -71,8 +71,13 @@ int main() {
 
     int t = 0;
     const auto &phase_order = toml::find<std::vector<std::string>>(config, "parameters", "order");
-    for (const auto &current_phase : phase_order) {
+    for (int current_phase_idx = 0; current_phase_idx < phase_order.size(); current_phase_idx++) {
 
+        if (t > 1000) {
+            break;
+        }
+
+        auto current_phase = phase_order[current_phase_idx];
         const auto &phase_params = toml::find(config, "parameters", current_phase);
 
         SIXRDParam sixrd_param{};
@@ -89,6 +94,7 @@ int main() {
         int duration = toml::find<int>(phase_params, "duration");
 
         for (int tau = 0; tau < duration; tau++, t++) {
+
             // output
             std::cout << t << std::endl;
 
@@ -113,10 +119,16 @@ int main() {
             // Output to console
             std::cout << x.colwise().sum() << std::endl;
             std::cout << "R0 = " << R0 << std::endl;
+            std::cout << "Phase = " << current_phase << std::endl;
 
             std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
             auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
             std::cout << time_span.count() << " seconds\n" << std::endl;
+
+            if (x.col(Iidx).sum() > 10000 && current_phase_idx > 2) {
+                current_phase_idx = 2;
+                break;
+            }
         }
         write_vector(R0_vec, R0_path);
     }
