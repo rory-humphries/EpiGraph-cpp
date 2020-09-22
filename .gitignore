@@ -4,3 +4,4 @@ output/
 gifs/
 data/processed/*
 *.csv
+*.png

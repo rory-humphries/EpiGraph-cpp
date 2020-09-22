@@ -6,8 +6,9 @@
 #include <random>
 #include <chrono>
 
+using namespace Eigen;
 
-using TravelModel = RandomTravelModel;
+//using MatrixX2d = Matrix<double, Dynamic, 2>;
 
 int main() {
 
@@ -16,58 +17,60 @@ int main() {
 
     // input file paths
     const auto &file_paths = toml::find(config, "file_paths");
-    const std::string distance_distribution = toml::find<std::string>(file_paths, "travel_distribution");
-    const std::string commuter_distribution = toml::find<std::string>(file_paths, "commuter_distribution");
-    const std::string vertex_data = toml::find<std::string>(file_paths, "vertex_data");
+    const std::string travel_weights_path = toml::find<std::string>(file_paths, "travel_distribution");
+    const std::string commuter_distribution_path = toml::find<std::string>(file_paths, "commuter_distribution");
+    const std::string node_long_lat_path = toml::find<std::string>(file_paths, "node_long_lat");
+    const std::string node_population_path = toml::find<std::string>(file_paths, "node_population");
+    const std::string node_county_path = toml::find<std::string>(file_paths, "node_county");
+
 
     // output file paths
     std::string agg_output_path = toml::find<std::string>(config, "output", "aggregate_path");
     std::string full_output_path = toml::find<std::string>(config, "output", "full_path");
     std::string R0_path = toml::find<std::string>(config, "output", "R0_path");
 
-    int dim=0;
-    std::ifstream file(vertex_data);
-    std::string line;
-    while (getline(file, line))
-        dim++;
-    dim--;
 
-    io::CSVReader<3> in(vertex_data);
-    in.read_header(io::ignore_extra_column, "long", "lat", "population");
+    // containers to hold the network data
 
-    // maps to hold the network meta data
-    Eigen::Matrix<double, Eigen::Dynamic, 1> pop_vec(dim, 1);
-    Eigen::Matrix<double, Eigen::Dynamic, 2> pos_mat(dim, 2);
+    // holds the population of each node
+    VectorXd pop = read_matrix<VectorXd>(node_population_path, true);
+    int dim = pop.rows();
 
-    double lon, lat, population;
-    int i = 0;
-    while (in.read_row(lon, lat, population)) {
-        pop_vec[i] = population;
-        pos_mat(i,0) = lon;
-        pos_mat(i,1) = lat;
+    // holds the weights/probabilities of each node travelling to another
+    MatrixXd travel_weights = read_matrix<MatrixXd>(travel_weights_path);
+    assert(travel_weights.rows() == dim && travel_weights.cols() == dim);
 
-        i++;
-    }
+    // holds the long lat position of each node
+    MatrixX2d pos_mat = read_matrix<MatrixX2d>(node_long_lat_path, true);
+    assert(travel_weights.rows() == dim);
 
+    // holds the distance in km between each node
+    MatrixXd distance_mat;
+    distance_matrix(distance_mat, pos_mat);
+
+    // holds the SIXRD state of each node
+    SIXRD_state<double> x = SIXRD_state<double>::Zero(dim, 5);
+    x.col(Sidx) = pop;
+
+    // holds the R0 value for each time step
+    std::vector<double> R0_vec;
 
     // responsible for adding edges/travellers to the network
-    TravelModel rnd_travel(dim);
-    rnd_travel.set_commuter_dist(ProbDist_from_csv(commuter_distribution));
-    rnd_travel.set_travel_probs(distance_distribution);
+    RandomMatrix rnd_travel(dim);
 
-    SIXRD_state<double> x = SIXRD_state<double>::Zero(dim, 5);
+    // probability distribution for generating commuter numbers
+    ProbDist commuter_dist = ProbDist_from_csv(commuter_distribution_path);
 
-    x.col(Sidx) = pop_vec; // set entire population as susceptible
-
+    // Add initial infections
     auto rand_verts = toml::find<std::vector<int>>(config, "parameters", "initial_seed");
     for (auto &rand_v: rand_verts)
         infect_SIXRD_state(x, rand_v, 2);
 
+    // Write initial conditions
     write_net_SIXRD_state(x, "0", full_output_path);
     write_net_SIXRD_state_totals(x, agg_output_path, false);
 
-
-    std::vector<double> R0_vec;
+    double run_time = 0;
 
     int t = 0;
     const auto &phase_order = toml::find<std::vector<std::string>>(config, "parameters", "order");
@@ -83,20 +86,27 @@ int main() {
         sixrd_param.alpha = toml::find<double>(phase_params, "alpha");
         sixrd_param.kappa = toml::find<double>(phase_params, "kappa");
 
-        rnd_travel.set_max_distance(toml::find<double>(phase_params, "max_dist"));
-        rnd_travel.set_compliance(toml::find<double>(phase_params, "compliance"));
+        double max_dist = toml::find<double>(phase_params, "max_dist");
+        double compliance = toml::find<double>(phase_params, "compliance");
+
+        MatrixXd new_travel_weights = (distance_mat.array() < max_dist).select(travel_weights,
+                                                                               compliance * travel_weights);
+        rnd_travel.set_entry_probs(travel_weights);
 
         int duration = toml::find<int>(phase_params, "duration");
-
         for (int tau = 0; tau < duration; tau++, t++) {
-            // output
-            std::cout << t << std::endl;
 
             std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
 
-            // Generate movements and store in adj matrix
+            // Compute number of travellers from each node
+            VectorXd travel_pop = pop.unaryExpr(
+                    [&](double x) {
+                        return x * commuter_dist(global_engine());
+                    });
+
             Eigen::SparseMatrix<double> adj(x.rows(), x.rows());
-            rnd_travel.add_out_travels(adj, pos_mat, pop_vec);
+            // Generate movements and store in adj matrix
+            rnd_travel.generate(adj, travel_pop);
 
             // Update the state matrix
             net_SIXRD_ode(x, adj, sixrd_param);
@@ -111,12 +121,22 @@ int main() {
             write_net_SIXRD_state_totals(x, agg_output_path, true);
 
             // Output to console
-            std::cout << x.colwise().sum() << std::endl;
-            std::cout << "R0 = " << R0 << std::endl;
-
             std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
             auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
-            std::cout << time_span.count() << " seconds\n" << std::endl;
+            run_time += time_span.count();
+            RowVectorXd op_vec = x.colwise().sum();
+            std::cout << "#################################\n";
+            std::cout << "Time step : " << t << "\n";
+            std::cout << "S : " << op_vec[Sidx];
+            std::cout << ", I : " << op_vec[Iidx];
+            std::cout << ", X : " << op_vec[Xidx];
+            std::cout << ", R : " << op_vec[Ridx];
+            std::cout << ", D : " << op_vec[Didx] << "\n";
+            std::cout << "R0 : " << R0 << "\n";
+            std::cout << "Run time : " << time_span.count() << "s , Total run time : " << run_time << "s\n";
+            std::cout << "#################################\n\n";
+
+
         }
         write_vector(R0_vec, R0_path);
     }

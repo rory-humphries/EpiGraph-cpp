@@ -20,7 +20,7 @@ auto write_vector(Eigen::MatrixBase<Derived> vec, std::string fpath) -> void{
     col_vector_assert(vec);
 
     std::ofstream myfile;
-    myfile.open (fpath + ".csv");
+    myfile.open(fpath);
 
     for (int i = 0; i<vec.rows()-1;i++) {
         myfile << vec[i];
@@ -36,7 +36,7 @@ auto write_vector(std::vector<T> vec, std::string fpath) -> void{
      */
 
     std::ofstream myfile;
-    myfile.open (fpath + ".csv");
+    myfile.open(fpath);
 
     for (int i = 0; i<vec.size()-1;i++) {
         myfile << vec[i];
@@ -45,39 +45,81 @@ auto write_vector(std::vector<T> vec, std::string fpath) -> void{
     myfile << vec[vec.size()-1];
 }
 
-auto matrix_from_csv(std::string path_to_file) -> std::vector<std::vector<double>> {
-    std::ifstream myfile;
-    myfile.open(path_to_file);
+template<typename T>
+auto read_2d_vector(std::string path_to_file) -> std::vector<std::vector<T>> {
+    std::ifstream infile;
+    infile.open(path_to_file);
 
     std::string line;
 
-    std::vector<std::vector<double>> op_vec;
+    std::vector<std::vector<T>> op_vec;
 
-    if (myfile.is_open()) {
-        while (getline(myfile, line)) {
-            std::istringstream s(line);
-            std::string field;
+    while (getline(infile, line, '\n')) {
+        std::vector<double> tmp;
+        std::istringstream ss(line);
+        std::string token;
 
-            std::vector<double> line_vec;
-
-            while (getline(s, field, ',')) {
-                double x = stof(field);
-                line_vec.push_back(x);
-            }
-            op_vec.push_back(line_vec);
+        while (std::getline(ss, token, ',')) {
+            tmp.push_back(stod(token));
         }
+
+        op_vec.push_back(tmp);
+
     }
-    myfile.close();
+    infile.close();
 
     return op_vec;
 }
 
-template <typename TNetwork>
-void write_edges(TNetwork &x, const std::string& id, std::string dir) {
+template<typename Mat>
+auto read_matrix(std::string path_to_file, bool header = false) -> Mat {
+    using Scalar = typename Mat::Scalar;
+
+    std::ifstream infile;
+    infile.open(path_to_file);
+
+    std::string line;
+    std::vector<Scalar> op_vec;
+
+    // If there is a header ignore it
+    if (header)
+        getline(infile, line, '\n');
+
+    // Ensure consistent col length
+    getline(infile, line, '\n');
+    std::vector<Scalar> tmp;
+    std::istringstream ss(line);
+    std::string token;
+
+    int cols = 0;
+    while (std::getline(ss, token, ',')) {
+        op_vec.push_back(stod(token));
+        cols++;
+    }
+
+    int rows = 1;
+    while (getline(infile, line, '\n')) {
+        ss = std::istringstream(line);
+        int curr_cols = 0;
+        while (std::getline(ss, token, ',')) {
+            op_vec.push_back(stod(token));
+            curr_cols++;
+        }
+        if (curr_cols != cols)
+            throw std::invalid_argument("Inconsistent line length");
+        rows++;
+    }
+    infile.close();
+
+    return Eigen::Map<Mat>(op_vec.data(), rows, op_vec.size() / rows);;
+}
+
+template<typename TNetwork>
+void write_edges(TNetwork &x, const std::string &id, std::string dir) {
     std::ofstream myfile;
     std::string newd = dir;
 
-    myfile.open (dir + id + ".csv");
+    myfile.open(dir + id + ".csv");
 
     myfile << "source,";
     myfile << "destination,";

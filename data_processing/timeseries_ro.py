@@ -14,25 +14,23 @@ import matplotlib.cbook as cbook
 
 import datetime
 
-
 import os
 import geopandas as gpd
 from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
 
 ######################
-save_figs = False
-op_name = '5_phase_r0.csv'
+save_figs = True
+op_name = '5_phase_r0.png'
 dir_path = "../output/"
 #####################
 
-R0 = np.loadtxt("../R0.csv", delimiter = ',')
-
+R0 = np.loadtxt("../R0.csv", delimiter=',')
 
 files = []
 for filename in os.listdir(dir_path):
     files += [filename]
-    
-num_ts = 1000  # len(files)
+
+num_ts = 400  # len(files)
 
 s=[]
 i=[]
@@ -67,14 +65,14 @@ start_date = datetime.datetime(2020, 1, 22)
 
 dates = [start_date + datetime.timedelta(days=x) for x in range(num_ts)]
 
-#fig, ax = plt.subplots(1, 1, figsize = (16/3, 9/3))
+# fig, ax = plt.subplots(1, 1, figsize = (16/3, 9/3))
 fig, ax = plt.subplots(1, 1)
-#l1=plt.plot(dates, s, label = 'S', c = 'tab:purple')
-l2=plt.plot(dates, i, label = 'I', c = 'tab:blue')
-l3=plt.plot(dates, r, label = 'R', c = 'tab:orange')
-l4=plt.plot(dates, d, label = 'D', c = 'tab:red')
-l5=plt.plot(dates, x, label = 'X', c = 'tab:green')
-#plt.plot(dates[0], [0], 'k--', label = r"$R_0$")
+l1 = plt.plot(dates, s, label='S', c='tab:purple')
+# l2=plt.plot(dates, i, label = 'I', c = 'tab:blue')
+l3 = plt.plot(dates, r, label='R', c='tab:orange')
+l4 = plt.plot(dates, d, label='D', c='tab:red')
+# l5=plt.plot(dates, x, label = 'X', c = 'tab:green')
+# plt.plot(dates[0], [0], 'k--', label = r"$R_0$")
 
 event_durations = [50, 67, 21, 21, 21, 21, 21, 400]
 event_dates = [start_date]
@@ -84,7 +82,7 @@ for x in event_durations:
 shade_event_dates = event_dates[1:-1]
 num_shade_colors = len(shade_event_dates)
 
-colors = plt.cm.viridis(np.linspace(0,1,num_shade_colors))
+colors = plt.cm.viridis(np.linspace(0, 1, num_shade_colors))
 
 for i in range(len(shade_event_dates) - 1):
     d1 = shade_event_dates[i]
@@ -94,7 +92,7 @@ for i in range(len(shade_event_dates) - 1):
 ax.set_xlabel('Time [months]')
 ax.set_ylabel('No. of individuals')
 
-# plt.ylim(1, 9000000)
+plt.ylim(1, 9000000)
 # plt.yscale('log')
 plt.legend()
 
@@ -108,12 +106,14 @@ ax2.tick_params(which='major', length=16)
 plt.setp(ax.xaxis.get_minorticklabels(), rotation=45)
 #plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
 ax2.set_ylabel(r'$R_0$')  # we already handled the x-label with ax1
-l6 = ax2.plot(dates, R0[:num_ts], 'k--', label=r'$R_0$', alpha=0.2)
+l6 = ax2.plot(dates, R0[:num_ts], 'k--', label=r'$R_0$', alpha=0.8)
 # added these three lines
-lns = l2 + l3 + l4 + l5 + l6
+#lns = l1+l2+l3+l4+l5+l6
 labs = [l.get_label() for l in lns]
 ax.legend(lns, labs, loc=1)
 #ax2.tick_params(axis='y', labelcolor=color)
 
 fig.tight_layout()  # otherwise the right y-label is slightly clipped
+if save_figs == True:
+    plt.savefig(op_name, bbox_inches='tight', dpi= 300)
 plt.show()

@@ -123,6 +123,7 @@ struct ProbDist {
         return *this;
     }
 
+
     template<typename RandomGenerator>
     double operator()(RandomGenerator &gen) {
 

@@ -3,20 +3,20 @@
 commuter_distribution = "../data/processed/ed_commuter_probs.csv"
 # path to file that holds the distribution of travel distances
 travel_distribution = "../data/processed/ed_soa_travel_prob_mat_ratio_bands.csv"
-# path to file that holds the input information for each vertex
-vertex_data = "../data/processed/ed_soa_vertices.csv"
+# path to file that holds the long lat positions for each node
+node_long_lat = "../data/processed/ed_soa_long_lat.csv"
+# path to file that holds the population for each node
+node_population = "../data/processed/ed_soa_population.csv"
+# path to file that holds the county for each node
+node_county = "../data/processed/ed_soa_county.csv"
 
 [output]
-# output the totals/sums belongong to each comopartment in the network at each time step
-# the file name and path for the agg output file
-aggregate_path = "../agg_output.csv"
-
 # the directory to output all the full output files
-# don't forget last slash
 full_path = "../output/"
-
-# output path for the reproduction numbers
-R0_path = "../R0"
+# the file path the comopartment totals at each time step in the network
+aggregate_path = "../agg_output.csv"
+# the file path for the reproduction numbers at each time step in the network
+R0_path = "../R0.csv"
 
 
 [parameters]
@@ -24,6 +24,12 @@ R0_path = "../R0"
 # the vertices at which the disease first appears
 # the vertex indices are those given in the vertex_data file
 initial_seed = [257]
+
+# Maximum number of time steps, this is important for dynamic lockdowns when there is no set runtime
+max_t = 1000
+
+# Maximum number of infected in country before country wide lockdown
+max_I = 10000
 
 # must list all phases in order of which they happen in the simulation, if you add any phases be sure to list it's
 # order here

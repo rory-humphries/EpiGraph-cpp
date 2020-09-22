@@ -60,11 +60,15 @@ lat_list = []
 for pt in transformer.itransform(zip(vertices_df.long, vertices_df.lat)):
     long_list.append(pt[0])
     lat_list.append(pt[1])
-    
+
 vertices_df.long = long_list
-vertices_df.lat = lat_list    
-                                                         
-vertices_df.to_csv('../data/processed/ed_soa_vertices.csv', index = True)
+vertices_df.lat = lat_list
+
+vertices_df.to_csv('../data/processed/ed_soa_vertices.csv', index=True)
+
+vertices_df[["long", "lat"]].to_csv('../data/processed/ed_soa_long_lat.csv', index=False)
+vertices_df[["population"]].to_csv('../data/processed/ed_soa_population.csv', index=False)
+vertices_df[["type"]].to_csv('../data/processed/ed_soa_county.csv', index=False)
 
 """
 Output the probability distribution of travel distances from the ed edges
