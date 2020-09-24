@@ -21,35 +21,44 @@ auto write_vector(Eigen::MatrixBase<Derived> vec, std::string fpath) -> void{
 
     std::ofstream myfile;
     myfile.open(fpath);
+    myfile.open(fpath);
+    if (myfile.fail()) {
+        throw std::runtime_error("Failed to open file " + fpath);
+    }
 
-    for (int i = 0; i<vec.rows()-1;i++) {
+    for (int i = 0; i < vec.rows() - 1; i++) {
         myfile << vec[i];
         myfile << ",";
     }
-    myfile << vec[vec.rows()-1];
+    myfile << vec[vec.rows() - 1];
 }
 
 template<typename T>
-auto write_vector(std::vector<T> vec, std::string fpath) -> void{
+auto write_vector(std::vector<T> vec, std::string fpath) -> void {
     /*
      * Writes a column vector to csv.
      */
 
     std::ofstream myfile;
     myfile.open(fpath);
+    if (myfile.fail()) {
+        throw std::runtime_error("Failed to open file " + fpath);
+    }
 
-    for (int i = 0; i<vec.size()-1;i++) {
+    for (int i = 0; i < vec.size() - 1; i++) {
         myfile << vec[i];
         myfile << ",";
     }
-    myfile << vec[vec.size()-1];
+    myfile << vec[vec.size() - 1];
 }
 
 template<typename T>
 auto read_2d_vector(std::string path_to_file) -> std::vector<std::vector<T>> {
     std::ifstream infile;
     infile.open(path_to_file);
-
+    if (infile.fail()) {
+        throw std::runtime_error("Failed to open file " + path_to_file);
+    }
     std::string line;
 
     std::vector<std::vector<T>> op_vec;
@@ -77,6 +86,9 @@ auto read_matrix(std::string path_to_file, bool header = false) -> Mat {
 
     std::ifstream infile;
     infile.open(path_to_file);
+    if (infile.fail()) {
+        throw std::runtime_error("Failed to open file " + path_to_file);
+    }
 
     std::string line;
     std::vector<Scalar> op_vec;
@@ -114,32 +126,5 @@ auto read_matrix(std::string path_to_file, bool header = false) -> Mat {
     return Eigen::Map<Mat>(op_vec.data(), rows, op_vec.size() / rows);;
 }
 
-template<typename TNetwork>
-void write_edges(TNetwork &x, const std::string &id, std::string dir) {
-    std::ofstream myfile;
-    std::string newd = dir;
-
-    myfile.open(dir + id + ".csv");
-
-    myfile << "source,";
-    myfile << "destination,";
-    myfile << "population\n";
-
-
-    for (int v = 0; v<x.num_vertices(); v++)
-    {
-        auto it_pair = x.out_edges(v);
-        auto it_beg = it_pair.first;
-        auto it_end = it_pair.second;
-
-        for (; it_beg!=it_end; it_beg++) {
-
-            myfile << it_beg->src << ",";
-            myfile << it_beg->dst << ",";
-            myfile << x.eprop[*it_beg].population << "\n";
-        }
-    }
-    myfile.close();
-}
 
 #endif //EPIGRAPH_IO_H

@@ -7,6 +7,7 @@
 #define EPIGRAPH_SIRX_NETWORK_H
 
 #include <map>
+#include <iostream>
 #include "spatial_util.h"
 #include "eigen_util.h"
 
@@ -17,7 +18,12 @@
 
 
 template<typename Scalar>
-using SIXRD_state = Eigen::Matrix<Scalar, Eigen::Dynamic, 5>;
+using SIXRDState = Eigen::Matrix<Scalar, Eigen::Dynamic, 5>;
+
+template<typename Derived>
+auto SIXRDState_assert(const Eigen::MatrixBase<Derived> &mat) -> void {
+    static_assert(Derived::ColsAtCompileTime == 5, "Expected a matrix with 5 cols");
+}
 
 enum SIXRD_idx : Eigen::Index {
     Sidx, Iidx, Xidx, Ridx, Didx
@@ -29,7 +35,7 @@ enum SIXRD_param_idx : Eigen::Index {
 
 template<typename Derived>
 auto infect_SIXRD_state(Eigen::MatrixBase<Derived> &x, Eigen::Index i, double N = 1) -> void {
-    static_assert(5 == Derived::ColsAtCompileTime, "Input matrix must have 5 cols");
+    SIXRDState_assert(x);
 
     double change = x(i, 0) - (0 > x(i, 0) - N ? 0 : x(i, 0) - N);
     x(i, 0) -= change;
@@ -38,7 +44,7 @@ auto infect_SIXRD_state(Eigen::MatrixBase<Derived> &x, Eigen::Index i, double N 
 
 template<typename Derived>
 auto print_SIXRD_totals(Eigen::MatrixBase<Derived> &x) -> void {
-    static_assert(5 == Derived::ColsAtCompileTime, "Input matrix must have 5 cols");
+    SIXRDState_assert(x);
 
     Eigen::RowVectorXd op_vec = x.colwise().sum();
     std::cout << "S : " << op_vec[Sidx];
@@ -60,7 +66,7 @@ net_SIXRD_ode(Eigen::MatrixBase<DerivedA> &xmat, Eigen::EigenBase<DerivedB> &adj
      * matrix then adj must be a n x n matrix.
      */
     col_vector_assert(sixrd_params);
-    static_assert(5 == DerivedA::ColsAtCompileTime, "Input matrix must have 5 cols");
+    SIXRDState_assert(xmat);
 
     double beta = sixrd_params[0];//param.beta;
     double c = sixrd_params[1];//param.c;
@@ -100,9 +106,10 @@ net_SIXRD_ode(Eigen::MatrixBase<DerivedA> &xmat, Eigen::EigenBase<DerivedB> &adj
 
 };
 
+
 template<typename Derived>
 void write_net_SIXRD_state(const Eigen::MatrixBase<Derived> &x, const std::string &id, std::string dir) {
-    static_assert(5 == Derived::ColsAtCompileTime, "Input matrix must have 5 cols");
+    SIXRDState_assert(x);
 
     std::ofstream myfile;
 
@@ -236,8 +243,8 @@ auto SIXRD_R0(Eigen::MatrixBase<DerivedA> &xmat, Eigen::MatrixBase<DerivedB> &si
     /*
      * Find the reproduction number for the SIXRD model
      */
-
-    static_assert(1 == DerivedA::ColsAtCompileTime, "Input matrix must have 1 cols (must be a vector)");
+    col_vector_assert(xmat);
+    col_vector_assert(sixrd_params);
 
     using Mat = Eigen::Matrix2d;
 

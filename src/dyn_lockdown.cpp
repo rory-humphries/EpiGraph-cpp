@@ -8,10 +8,22 @@
 
 using namespace Eigen;
 
-int main() {
+int main(int argc, char *argv[]) {
+
+    std::string config_path;
+
+    if (argc < 2) {
+        std::cout << "Enter path to config >";
+        std::cin >> config_path;
+    } else if (argc == 2) {
+        config_path = argv[1];
+    } else {
+        std::cout << "Incorrect number of command line arguments passed. Only the config file path is expected.\n";
+        return -1;
+    }
 
     // toml stuff to read in all configs and paths
-    const auto config = toml::parse("../config.toml");
+    const auto config = toml::parse(config_path);
 
     // input file paths
     const auto &file_paths = toml::find(config, "file_paths");
@@ -46,7 +58,7 @@ int main() {
     distance_matrix(distance_mat, pos_mat);
 
     // holds the SIXRD state of each node
-    SIXRD_state<double> x = SIXRD_state<double>::Zero(dim, 5);
+    SIXRDState<double> x = SIXRDState<double>::Zero(dim, 5);
     x.col(Sidx) = pop;
 
     // holds the R0 value for each time step

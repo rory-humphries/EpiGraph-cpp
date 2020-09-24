@@ -11,7 +11,6 @@
 #include <sstream>
 #include <algorithm>
 #include <iostream>
-#include "csv.h"
 
 // not thread safe, careful with openMP
 std::mt19937 &global_engine();
@@ -140,16 +139,37 @@ struct ProbDist {
 };
 
 auto ProbDist_from_csv(std::string csv) -> ProbDist {
-    io::CSVReader<2> in(csv);
-    in.read_header(io::ignore_extra_column, "value", "probability");
+    std::ifstream infile;
+    infile.open(csv);
+    if (infile.fail()) {
+        throw std::runtime_error("Failed to open file " + csv);
+    }
+    std::string line;
+
     std::vector<std::pair<double, double>> val_prob_pairs;
 
-    double val; double prob;
-    while(in.read_row(val, prob)) {
+    double val;
+    double prob;
+
+    getline(infile, line, '\n'); // header
+
+    while (getline(infile, line, '\n')) {
+        std::istringstream ss(line);
+        std::string token;
+
+        std::getline(ss, token, ',');
+
+        val = stod(token);
+
+        std::getline(ss, token, ',');
+
+        prob = stod(token);
+
         val_prob_pairs.push_back({val, prob});
     }
-
+    infile.close();
     return ProbDist(val_prob_pairs.begin(), val_prob_pairs.end());
+
 }
 
 #endif //EPIGRAPH_DISTRIBUTIONS_H

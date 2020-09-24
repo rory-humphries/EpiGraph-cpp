@@ -14,7 +14,6 @@
 
 #include "distributions.h"
 #include "io.h"
-#include "spatial_util.h"
 
 class RandomMatrix {
 private:
