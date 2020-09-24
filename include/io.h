@@ -21,7 +21,6 @@ auto write_vector(Eigen::MatrixBase<Derived> vec, std::string fpath) -> void{
 
     std::ofstream myfile;
     myfile.open(fpath);
-    myfile.open(fpath);
     if (myfile.fail()) {
         throw std::runtime_error("Failed to open file " + fpath);
     }

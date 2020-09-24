@@ -2,7 +2,7 @@
 # path to file that holds the distribution of population proportions that commute.
 commuter_distribution = "../data/processed/ed_commuter_probs.csv"
 # path to file that holds the distribution of travel distances
-travel_distribution = "../data/processed/ed_soa_travel_prob_mat_ratio_bands.csv"
+travel_distribution = "../data/processed/ed_soa_travel_prob_mat_ratio_bandhs.csv"
 # path to file that holds the long lat positions for each node
 node_long_lat = "../data/processed/ed_soa_long_lat.csv"
 # path to file that holds the population for each node
