@@ -8,8 +8,6 @@
 
 using namespace Eigen;
 
-//using MatrixX2d = Matrix<double, Dynamic, 2>;
-
 int main() {
 
     // toml stuff to read in all configs and paths
@@ -35,6 +33,10 @@ int main() {
     // holds the population of each node
     VectorXd pop = read_matrix<VectorXd>(node_population_path, true);
     int dim = pop.rows();
+
+    // holds the population of each node
+    VectorXi county = read_matrix<VectorXi>(node_population_path, true);
+    assert(county.rows() == dim);
 
     // holds the weights/probabilities of each node travelling to another
     MatrixXd travel_weights = read_matrix<MatrixXd>(travel_weights_path);
@@ -71,20 +73,26 @@ int main() {
     write_net_SIXRD_state_totals(x, agg_output_path, false);
 
     double run_time = 0;
-
     int t = 0;
-    const auto &phase_order = toml::find<std::vector<std::string>>(config, "parameters", "order");
-    for (const auto &current_phase : phase_order) {
+    int max_t = toml::find<int>(config, "parameters", "max_t");
+    int max_I = toml::find<int>(config, "parameters", "max_I");
 
+    const auto &phase_order = toml::find<std::vector<std::string>>(config, "parameters", "order");
+    for (int current_phase_idx = 0; current_phase_idx < phase_order.size(); current_phase_idx++) {
+
+        if (t > max_t)
+            break;
+
+        auto current_phase = phase_order[current_phase_idx];
         const auto &phase_params = toml::find(config, "parameters", current_phase);
 
-        Eigen::Matrix<double, 5, 1> sixrd_param(5, 1);
+        SIXRDParam sixrd_param{};
 
-        sixrd_param[0] = toml::find<double>(phase_params, "beta");
-        sixrd_param[1] = toml::find<double>(phase_params, "c");
-        sixrd_param[4] = toml::find<double>(phase_params, "mu");
-        sixrd_param[3] = toml::find<double>(phase_params, "alpha");
-        sixrd_param[4] = toml::find<double>(phase_params, "kappa");
+        sixrd_param.beta = toml::find<double>(phase_params, "beta");
+        sixrd_param.mu = toml::find<double>(phase_params, "mu");
+        sixrd_param.c = toml::find<double>(phase_params, "c");
+        sixrd_param.alpha = toml::find<double>(phase_params, "alpha");
+        sixrd_param.kappa = toml::find<double>(phase_params, "kappa");
 
         double max_dist = toml::find<double>(phase_params, "max_dist");
         double compliance = toml::find<double>(phase_params, "compliance");
@@ -120,6 +128,7 @@ int main() {
             write_net_SIXRD_state(x, std::to_string(t), full_output_path);
             write_net_SIXRD_state_totals(x, agg_output_path, true);
 
+
             // Output to console
             std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
             auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
@@ -127,11 +136,19 @@ int main() {
             RowVectorXd op_vec = x.colwise().sum();
             std::cout << "#################################\n";
             std::cout << "Time step : " << t << "\n";
-            print_SIXRD_totals(x);
+            std::cout << "S : " << op_vec[Sidx];
+            std::cout << ", I : " << op_vec[Iidx];
+            std::cout << ", X : " << op_vec[Xidx];
+            std::cout << ", R : " << op_vec[Ridx];
+            std::cout << ", D : " << op_vec[Didx] << "\n";
             std::cout << "R0 : " << R0 << "\n";
             std::cout << "Run time : " << time_span.count() << "s , Total run time : " << run_time << "s\n";
             std::cout << "#################################\n\n";
 
+            if (x.col(Iidx).sum() > max_I && current_phase_idx > 2) {
+                current_phase_idx = 2;
+                break;
+            }
 
         }
         write_vector(R0_vec, R0_path);

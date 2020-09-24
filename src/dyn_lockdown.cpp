@@ -21,7 +21,6 @@ int main() {
     const std::string node_population_path = toml::find<std::string>(file_paths, "node_population");
     const std::string node_county_path = toml::find<std::string>(file_paths, "node_county");
 
-
     // output file paths
     std::string agg_output_path = toml::find<std::string>(config, "output", "aggregate_path");
     std::string full_output_path = toml::find<std::string>(config, "output", "full_path");
@@ -82,13 +81,14 @@ int main() {
         auto current_phase = phase_order[current_phase_idx];
         const auto &phase_params = toml::find(config, "parameters", current_phase);
 
-        SIXRDParam sixrd_param{};
 
-        sixrd_param.beta = toml::find<double>(phase_params, "beta");
-        sixrd_param.mu = toml::find<double>(phase_params, "mu");
-        sixrd_param.c = toml::find<double>(phase_params, "c");
-        sixrd_param.alpha = toml::find<double>(phase_params, "alpha");
-        sixrd_param.kappa = toml::find<double>(phase_params, "kappa");
+        Eigen::Matrix<double, 5, 1> sixrd_param(5, 1);
+
+        sixrd_param[0] = toml::find<double>(phase_params, "beta");
+        sixrd_param[1] = toml::find<double>(phase_params, "c");
+        sixrd_param[2] = toml::find<double>(phase_params, "mu");
+        sixrd_param[3] = toml::find<double>(phase_params, "alpha");
+        sixrd_param[4] = toml::find<double>(phase_params, "kappa");
 
         double max_dist = toml::find<double>(phase_params, "max_dist");
         double compliance = toml::find<double>(phase_params, "compliance");
@@ -129,14 +129,9 @@ int main() {
             std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
             auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
             run_time += time_span.count();
-            RowVectorXd op_vec = x.colwise().sum();
             std::cout << "#################################\n";
             std::cout << "Time step : " << t << "\n";
-            std::cout << "S : " << op_vec[Sidx];
-            std::cout << ", I : " << op_vec[Iidx];
-            std::cout << ", X : " << op_vec[Xidx];
-            std::cout << ", R : " << op_vec[Ridx];
-            std::cout << ", D : " << op_vec[Didx] << "\n";
+            print_SIXRD_totals(x);
             std::cout << "R0 : " << R0 << "\n";
             std::cout << "Run time : " << time_span.count() << "s , Total run time : " << run_time << "s\n";
             std::cout << "#################################\n\n";

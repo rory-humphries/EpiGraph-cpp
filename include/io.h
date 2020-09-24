@@ -8,7 +8,7 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
-#include <Eigen/Core>
+#include <Eigen/Dense>
 #include "eigen_util.h"
 
 template<typename Derived>

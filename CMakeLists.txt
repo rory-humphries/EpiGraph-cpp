@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 project(EpiGraph)
 
 set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_VERBOSE_MAKEFILE ON)
 
 include_directories("/usr/include/eigen3/")
 
@@ -16,7 +17,6 @@ find_package(OpenMP)
 if (OpenMP_CXX_FOUND)
     target_link_libraries(MultiPhaseLockDown OpenMP::OpenMP_CXX)
     target_link_libraries(DynLockDown OpenMP::OpenMP_CXX)
-
 endif ()
 
 
