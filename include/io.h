@@ -52,6 +52,28 @@ auto write_vector(std::vector<T> vec, std::string fpath) -> void {
 }
 
 template<typename T>
+auto read_vector(std::string path_to_file, bool header = false) -> std::vector<T> {
+    std::ifstream infile;
+    infile.open(path_to_file);
+    if (infile.fail()) {
+        throw std::runtime_error("Failed to open file " + path_to_file);
+    }
+
+    std::string line;
+
+    // If there is a header ignore it
+    if (header)
+        getline(infile, line, '\n');
+    std::vector<T> op_vec;
+    while (getline(infile, line, '\n')) {
+        op_vec.push_back(line);
+    }
+    infile.close();
+
+    return op_vec;
+}
+
+template<typename T>
 auto read_2d_vector(std::string path_to_file) -> std::vector<std::vector<T>> {
     std::ifstream infile;
     infile.open(path_to_file);

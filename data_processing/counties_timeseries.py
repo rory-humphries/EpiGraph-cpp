@@ -1,74 +1,104 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Mon Jul 20 12:47:57 2020
+Created on Wed May 27 09:02:56 2020
 
 @author: roryh
 """
-
 
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import matplotlib.cbook as cbook
+
 import datetime
+
 import os
+import geopandas as gpd
+from shapely import wkt
 
 ######################
-save_figs = True
-op_name = 'counties'
-dir_path = "../output/"
+save_figs = False
+annotate_events = False
+
+data_path = '../output/'
+fig_name = 'test.png'
+
+max_time = 500
 #####################
 
+
 files = []
-for filename in os.listdir(dir_path):
+for filename in os.listdir(data_path):
     files += [filename]
-    
-num_ts = 500#len(files)
-years = mdates.YearLocator()   # every year
+
+# read in shapefile
+ed_soa_gdf = pd.read_csv('../data/processed/ed_soa_data_frame.csv')
+ed_soa_gdf['geometry'] = ed_soa_gdf['geometry'].apply(wkt.loads)
+ed_soa_gdf = gpd.GeoDataFrame(ed_soa_gdf, crs='epsg:4326')
+ed_soa_gdf = ed_soa_gdf.to_crs('epsg:29902')
+
+counties = ed_soa_gdf.county.unique()
+
+start_date = datetime.datetime(2020, 1, 22)
+
+dates = [start_date + datetime.timedelta(days=x) for x in range(max_time)]
+years = mdates.YearLocator()  # every year
 months = mdates.MonthLocator()  # every month
 years_fmt = mdates.DateFormatter('%Y')
 months_fmt = mdates.DateFormatter('%m')
-start_date = datetime.datetime(2020, 1, 22)
-dates = [start_date + datetime.timedelta(days=x) for x in range(num_ts)]
 
-
-df = pd.read_csv("../output/0.csv")
-inds = df.sort_values('N', ascending = False).index[1:6]
-
-# hold info on every Electoral Division (ed) and super output area (soa)
-ed_soa_df = pd.read_csv('../data/raw/Joined_Pop_Data_CSO_NISRA.csv')
-
-# maps each ed to and soa to it's index in ed_soa_df
-ed_soa_id_map = {ed:x for ed, x in zip(ed_soa_df['Electoral Division'], ed_soa_df.index)}
-
-soa_counties = pd.read_csv('../data/raw/Geographic Data (statistical geographies).csv')
-soa_counties.index = soa_counties['SOA Code']
-
-ed_counties = pd.read_csv('../data/raw/ED_Basic_Info.csv')
-ed_counties.index = ed_counties['Electoral Division'].str.split(expand=True)[0]
-
-county_set = []
-county_set.extend(np.unique(ed_counties['COUNTY'].to_numpy()))
-county_dict_rev = {y:x for x,y in zip(county_set, range(len(county_set)))}
-
-plot_data = {i:[] for i in inds}
-
-maxi = 0
-for filename in range(0, num_ts):
-    df = pd.read_csv("../output/"+str(filename)+".csv")
-    for i in inds:
-        plot_data[i].append(df.iloc[i].I)
-        maxi = max(maxi, plot_data[i][-1])
-     
 fig, ax = plt.subplots(1, 1)
 
-colors = plt.cm.viridis(np.linspace(0,1,len(inds)))
-c = 0
-for i in inds:
-    plt.plot(dates, plot_data[i], label = county_dict_rev[i], c = colors[c])
-    c+=1
+for county in np.random.choice(counties, 10, replace=False):
 
+    s = [];
+    i = [];
+    r = [];
+    d = [];
+    x = []
+
+    maxs = 0;
+    maxi = 0;
+    maxr = 0;
+    maxd = 0;
+    maxx = 0
+    for filename in range(0, max_time):
+        df = pd.read_csv("../output/" + str(filename) + ".csv")
+        s.append(sum(df.S))
+        i.append(sum(df.loc[ed_soa_gdf.county == county, 'I']))
+        r.append(sum(df.R))
+        d.append(sum(df.D))
+        x.append(sum(df.X))
+
+    maxs = max(s);
+    maxi = max(i);
+    maxr = max(r);
+    maxd = max(d);
+    maxx = max(x)
+
+    # fig, ax = plt.subplots(1, 1, figsize = (16/3, 9/3))
+    # plt.plot(dates, s, label = 'S', c = 'tab:purple')
+    plt.plot(dates, i, label=county)
+    # plt.plot(dates, r, label = 'R', c = 'tab:orange')
+    # plt.plot(dates, d, label = 'D', c = 'tab:red')
+    # plt.plot(dates, x, label = 'X', c = 'tab:green')
+
+event_durations = [50, 67, 21, 21, 21, 21, 21, 400]
+event_dates = [start_date]
+for x in event_durations:
+    event_dates.append(event_dates[-1] + datetime.timedelta(days=x))
+
+shade_event_dates = event_dates[1:-1]
+num_shade_colors = len(shade_event_dates)
+
+colors = plt.cm.viridis(np.linspace(0, 1, num_shade_colors))
+
+for i in range(len(shade_event_dates) - 1):
+    d1 = shade_event_dates[i]
+    d2 = shade_event_dates[i + 1]
+    plt.axvspan(d1, d2, color=colors[i], alpha=0.2)
 
 ax.xaxis.set_major_locator(years)
 ax.xaxis.set_major_formatter(years_fmt)
@@ -76,11 +106,12 @@ ax.xaxis.set_minor_locator(months)
 ax.xaxis.set_minor_formatter(months_fmt)
 ax.tick_params(which='major', length=16)
 plt.setp(ax.xaxis.get_minorticklabels(), rotation=45)
+
+plt.xlabel('Time [months]')
+plt.ylabel('No. of individuals')
+
+# plt.yscale('log')
 plt.legend()
-plt.yscale('log')
-plt.ylim(1, maxi)
 
 if save_figs == True:
-    plt.savefig(op_name + '.png', bbox_inches='tight', dpi = 300)
-
-#plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
+    plt.savefig('doomsday', bbox_inches='tight', dpi=300)

@@ -54,6 +54,7 @@ auto print_SIXRD_totals(Eigen::MatrixBase<Derived> &x) -> void {
     std::cout << ", D : " << op_vec[Didx] << "\n";
 }
 
+
 template<typename DerivedA, typename DerivedB, typename DerivedC>
 auto
 net_SIXRD_ode(Eigen::MatrixBase<DerivedA> &xmat, Eigen::EigenBase<DerivedB> &adj_,
@@ -103,6 +104,57 @@ net_SIXRD_ode(Eigen::MatrixBase<DerivedA> &xmat, Eigen::EigenBase<DerivedB> &adj
 
     xmat.col(0) += -beta * c * new_s.cwiseProduct(idiff_ndiff_inv) -
                    beta * c * S * idiff_ndiff_inv; // S
+
+};
+
+template<typename DerivedA, typename DerivedB, typename DerivedC>
+auto
+net_SIXRD_ode_inhom(Eigen::MatrixBase<DerivedA> &xmat, Eigen::EigenBase<DerivedB> &adj_,
+                    Eigen::MatrixBase<DerivedC> &sixrd_params) -> void {
+    /*
+     * xmat is expected to be an n x 5 matrix (columns checked at compile time) where the following column indices
+     * represent 0=S, 1=I, 2=X, 3=R, 4=D. The rows represent the nodes of the system.
+     *
+     * adj is the couplings in the system representing the movements of individual between nodes. If xmat is an n x 5
+     * matrix then adj must be a n x n matrix.
+     */
+    SIXRDState_assert(xmat);
+
+    const DerivedB &adj = adj_.derived();
+
+    Eigen::VectorXd n = xmat.rowwise().sum();
+
+    DerivedB S = (xmat.col(0).cwiseProduct(n.cwiseInverse())).asDiagonal() * adj;
+    DerivedB I = (xmat.col(1).cwiseProduct(n.cwiseInverse())).asDiagonal() * adj;
+
+    Eigen::VectorXd new_s = xmat.col(0) - S * Eigen::VectorXd::Ones(S.rows());
+
+    Eigen::VectorXd new_i =
+            xmat.col(1) + (Eigen::RowVectorXd::Ones(I.rows()) * I).transpose() - (I * Eigen::VectorXd::Ones(I.cols()));
+
+
+    n += (Eigen::RowVectorXd::Ones(adj.rows()) * adj).transpose() - (adj * Eigen::VectorXd::Ones(adj.cols()));
+
+    Eigen::VectorXd idiff_ndiff_inv = new_i.cwiseProduct(n.cwiseInverse());
+
+    xmat.col(4) += sixrd_params.col(alpha_idx).cwiseProduct(xmat.col(1) + xmat.col(2));// D
+    xmat.col(3) += sixrd_params.col(mu_idx).cwiseProduct(xmat.col(1) + xmat.col(2));// R
+    xmat.col(2) += sixrd_params.col(kappa_idx).cwiseProduct(xmat.col(1)) -
+                   sixrd_params.col(mu_idx).cwiseProduct(xmat.col(2)) -
+                   sixrd_params.col(alpha_idx).cwiseProduct(xmat.col(2)); // X
+
+    xmat.col(1) += sixrd_params.col(beta_idx).cwiseProduct(
+            sixrd_params.col(c_idx).cwiseProduct(new_s.cwiseProduct(idiff_ndiff_inv))) +
+                   (S * sixrd_params.col(beta_idx).cwiseProduct(sixrd_params.col(c_idx)).asDiagonal() *
+                    idiff_ndiff_inv) -
+                   sixrd_params.col(mu_idx).cwiseProduct(xmat.col(1)) -
+                   sixrd_params.col(alpha_idx).cwiseProduct(xmat.col(1)) -
+                   sixrd_params.col(kappa_idx).cwiseProduct(xmat.col(1));// I
+
+    xmat.col(0) += -sixrd_params.col(beta_idx).cwiseProduct(
+            sixrd_params.col(c_idx).cwiseProduct(new_s.cwiseProduct(idiff_ndiff_inv))) -
+                   (S * sixrd_params.col(beta_idx).cwiseProduct(sixrd_params.col(c_idx)).asDiagonal() *
+                    idiff_ndiff_inv); // S
 
 };
 

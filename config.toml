@@ -2,7 +2,7 @@
 # path to file that holds the distribution of population proportions that commute.
 commuter_distribution = "../data/processed/ed_commuter_probs.csv"
 # path to file that holds the distribution of travel distances
-travel_distribution = "../data/processed/ed_soa_travel_prob_mat_ratio_bandhs.csv"
+travel_distribution = "../data/processed/ed_soa_travel_prob_mat_ratio_bands.csv"
 # path to file that holds the long lat positions for each node
 node_long_lat = "../data/processed/ed_soa_long_lat.csv"
 # path to file that holds the population for each node
@@ -26,10 +26,10 @@ R0_path = "../R0.csv"
 initial_seed = [257]
 
 # Maximum number of time steps, this is important for dynamic lockdowns when there is no set runtime
-max_t = 1000
+max_t = 500
 
 # Maximum number of infected in country before country wide lockdown
-max_I = 10000
+max_I = 175
 
 # must list all phases in order of which they happen in the simulation, if you add any phases be sure to list it's
 # order here
