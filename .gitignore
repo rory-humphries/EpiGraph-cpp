@@ -1,9 +1,7 @@
+.idea/
 cmake*/
-.*
 output/
 gifs/
 data/processed/*
 *.csv
 *.png
-
-!libs/*
