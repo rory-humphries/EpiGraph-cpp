@@ -19,11 +19,14 @@ import geopandas as gpd
 from shapely import wkt
 
 ######################
-save_figs = False
-annotate_events = False
+save_figs = True
 
 data_path = '../output/'
-fig_name = 'test.png'
+
+output_name = 'max_I_1380_comp_50'
+fig_name = output_name + '.png'
+data_name = output_name + '.csv'
+title = '50% Compliance'
 
 max_time = 500
 #####################
@@ -49,9 +52,11 @@ months = mdates.MonthLocator()  # every month
 years_fmt = mdates.DateFormatter('%Y')
 months_fmt = mdates.DateFormatter('%m')
 
-fig, ax = plt.subplots(1, 1)
+fig, ax = plt.subplots(1, 1, figsize=(16, 9))
 
-for county in np.random.choice(counties, 10, replace=False):
+data = []
+for county in counties:
+    print(county)
 
     s = [];
     i = [];
@@ -66,26 +71,27 @@ for county in np.random.choice(counties, 10, replace=False):
     maxx = 0
     for filename in range(0, max_time):
         df = pd.read_csv("../output/" + str(filename) + ".csv")
-        s.append(sum(df.S))
+        # s.append(sum(df.S))
         i.append(sum(df.loc[ed_soa_gdf.county == county, 'I']))
-        r.append(sum(df.R))
-        d.append(sum(df.D))
-        x.append(sum(df.X))
+        # r.append(sum(df.R))
+        # d.append(sum(df.D))
+        # x.append(sum(df.X))
 
-    maxs = max(s);
+    # maxs = max(s);
     maxi = max(i);
-    maxr = max(r);
-    maxd = max(d);
-    maxx = max(x)
+    # maxr = max(r);
+    # maxd = max(d);
+    # maxx = max(x)
 
     # fig, ax = plt.subplots(1, 1, figsize = (16/3, 9/3))
     # plt.plot(dates, s, label = 'S', c = 'tab:purple')
-    plt.plot(dates, i, label=county)
+    plt.plot(dates, i, 'r-', alpha=0.5, label=county)
     # plt.plot(dates, r, label = 'R', c = 'tab:orange')
     # plt.plot(dates, d, label = 'D', c = 'tab:red')
     # plt.plot(dates, x, label = 'X', c = 'tab:green')
+    data.append(i)
 
-event_durations = [50, 67, 21, 21, 21, 21, 21, 400]
+event_durations = [50, 15, 52, 21, 21, 21, 21, 21, 400]
 event_dates = [start_date]
 for x in event_durations:
     event_dates.append(event_dates[-1] + datetime.timedelta(days=x))
@@ -107,11 +113,15 @@ ax.xaxis.set_minor_formatter(months_fmt)
 ax.tick_params(which='major', length=16)
 plt.setp(ax.xaxis.get_minorticklabels(), rotation=45)
 
+plt.title(title)
 plt.xlabel('Time [months]')
 plt.ylabel('No. of individuals')
 
 # plt.yscale('log')
-plt.legend()
+# plt.ylim(1,10000)
+# plt.legend()
 
 if save_figs == True:
-    plt.savefig('doomsday', bbox_inches='tight', dpi=300)
+    plt.savefig(fig_name, bbox_inches='tight', dpi=300)
+
+pd.DataFrame({c: d for c, d in zip(counties, data)}).to_csv(data_name)

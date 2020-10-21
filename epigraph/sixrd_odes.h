@@ -6,24 +6,12 @@
 #ifndef EPIGRAPH_SIRX_NETWORK_H
 #define EPIGRAPH_SIRX_NETWORK_H
 
+#include <Eigen/Core>
 #include <map>
 #include <iostream>
-#include "spatial_util.h"
+
 #include "eigen_util.h"
 
-#include <Eigen/Dense>
-#include <Eigen/Sparse>
-//#include "spectra/include/Spectra/GenEigsSolver.h"
-//#include "spectra/include/Spectra/MatOp/SparseGenMatProd.h"
-
-
-template<typename Scalar>
-using SIXRDState = Eigen::Matrix<Scalar, Eigen::Dynamic, 5>;
-
-template<typename Derived>
-auto SIXRDState_assert(const Eigen::MatrixBase<Derived> &mat) -> void {
-    static_assert(Derived::ColsAtCompileTime == 5, "Expected a matrix with 5 cols");
-}
 
 enum SIXRD_idx : Eigen::Index {
     Sidx, Iidx, Xidx, Ridx, Didx
@@ -33,32 +21,16 @@ enum SIXRD_param_idx : Eigen::Index {
     beta_idx, c_idx, mu_idx, alpha_idx, kappa_idx
 };
 
-template<typename Derived>
-auto infect_SIXRD_state(Eigen::MatrixBase<Derived> &x, Eigen::Index i, double N = 1) -> void {
-    SIXRDState_assert(x);
-
-    double change = x(i, 0) - (0 > x(i, 0) - N ? 0 : x(i, 0) - N);
-    x(i, 0) -= change;
-    x(i, 1) += change;
-}
 
 template<typename Derived>
-auto print_SIXRD_totals(Eigen::MatrixBase<Derived> &x) -> void {
-    SIXRDState_assert(x);
-
-    Eigen::RowVectorXd op_vec = x.colwise().sum();
-    std::cout << "S : " << op_vec[Sidx];
-    std::cout << ", I : " << op_vec[Iidx];
-    std::cout << ", X : " << op_vec[Xidx];
-    std::cout << ", R : " << op_vec[Ridx];
-    std::cout << ", D : " << op_vec[Didx] << "\n";
+auto SIXRDState_assert(const Eigen::MatrixBase<Derived> &mat) -> void {
+    static_assert(Derived::ColsAtCompileTime == 5, "Expected a matrix with 5 cols");
 }
-
 
 template<typename DerivedA, typename DerivedB, typename DerivedC>
 auto
-net_SIXRD_ode(Eigen::MatrixBase<DerivedA> &xmat, Eigen::EigenBase<DerivedB> &adj_,
-              Eigen::MatrixBase<DerivedC> &sixrd_params) -> void {
+net_SIXRD_ode(const Eigen::MatrixBase<DerivedA> &x, const Eigen::EigenBase<DerivedB> &adj_,
+              const Eigen::MatrixBase<DerivedC> &sixrd_params) -> DerivedA {
     /*
      * xmat is expected to be an n x 5 matrix (columns checked at compile time) where the following column indices
      * represent 0=S, 1=I, 2=X, 3=R, 4=D. The rows represent the nodes of the system.
@@ -67,7 +39,7 @@ net_SIXRD_ode(Eigen::MatrixBase<DerivedA> &xmat, Eigen::EigenBase<DerivedB> &adj
      * matrix then adj must be a n x n matrix.
      */
     col_vector_assert(sixrd_params);
-    SIXRDState_assert(xmat);
+    SIXRDState_assert(x);
 
     double beta = sixrd_params[0];//param.beta;
     double c = sixrd_params[1];//param.c;
@@ -77,34 +49,37 @@ net_SIXRD_ode(Eigen::MatrixBase<DerivedA> &xmat, Eigen::EigenBase<DerivedB> &adj
 
     const DerivedB &adj = adj_.derived();
 
-    Eigen::VectorXd n = xmat.rowwise().sum();
+    Eigen::VectorXd n = x.rowwise().sum();
 
-    DerivedB S = (xmat.col(0).cwiseProduct(n.cwiseInverse())).asDiagonal() * adj;
-    DerivedB I = (xmat.col(1).cwiseProduct(n.cwiseInverse())).asDiagonal() * adj;
+    DerivedB S = (x.col(0).cwiseProduct(n.cwiseInverse())).asDiagonal() * adj;
+    DerivedB I = (x.col(1).cwiseProduct(n.cwiseInverse())).asDiagonal() * adj;
 
-    Eigen::VectorXd new_s = xmat.col(0) - S * Eigen::VectorXd::Ones(S.rows());
+    Eigen::VectorXd new_s = x.col(0) - S * Eigen::VectorXd::Ones(S.rows());
 
     Eigen::VectorXd new_i =
-            xmat.col(1) + (Eigen::RowVectorXd::Ones(I.rows()) * I).transpose() - (I * Eigen::VectorXd::Ones(I.cols()));
+            x.col(1) + (Eigen::RowVectorXd::Ones(I.rows()) * I).transpose() - (I * Eigen::VectorXd::Ones(I.cols()));
 
 
     n += (Eigen::RowVectorXd::Ones(adj.rows()) * adj).transpose() - (adj * Eigen::VectorXd::Ones(adj.cols()));
 
     Eigen::VectorXd idiff_ndiff_inv = new_i.cwiseProduct(n.cwiseInverse());
 
-    xmat.col(4) += alpha * xmat.col(1) + alpha * xmat.col(2);// D
-    xmat.col(3) += mu * xmat.col(1) + mu * xmat.col(2);// R
-    xmat.col(2) += kappa * xmat.col(1) - mu * xmat.col(2) - alpha * xmat.col(2); // X
+    DerivedA dxdt(x.rows(), x.cols());
 
-    xmat.col(1) += beta * c * new_s.cwiseProduct(idiff_ndiff_inv) +
-                   beta * c * S * idiff_ndiff_inv -
-                   mu * xmat.col(1) -
-                   alpha * xmat.col(1) -
-                   kappa * xmat.col(1);// I
+    dxdt.col(4) = alpha * x.col(1) + alpha * x.col(2);// D
+    dxdt.col(3) = mu * x.col(1) + mu * x.col(2);// R
+    dxdt.col(2) = kappa * x.col(1) - mu * x.col(2) - alpha * x.col(2); // X
 
-    xmat.col(0) += -beta * c * new_s.cwiseProduct(idiff_ndiff_inv) -
-                   beta * c * S * idiff_ndiff_inv; // S
+    dxdt.col(1) = beta * c * new_s.cwiseProduct(idiff_ndiff_inv) +
+                  beta * c * S * idiff_ndiff_inv -
+                  mu * x.col(1) -
+                  alpha * x.col(1) -
+                  kappa * x.col(1);// I
 
+    dxdt.col(0) = -beta * c * new_s.cwiseProduct(idiff_ndiff_inv) -
+                  beta * c * S * idiff_ndiff_inv; // S
+
+    return dxdt;
 };
 
 template<typename DerivedA, typename DerivedB, typename DerivedC>
@@ -145,7 +120,7 @@ net_SIXRD_ode_inhom(Eigen::MatrixBase<DerivedA> &xmat, Eigen::EigenBase<DerivedB
 
     xmat.col(1) += sixrd_params.col(beta_idx).cwiseProduct(
             sixrd_params.col(c_idx).cwiseProduct(new_s.cwiseProduct(idiff_ndiff_inv))) +
-                   (S * sixrd_params.col(beta_idx).cwiseProduct(sixrd_params.col(c_idx)).asDiagonal() *
+                   (S * (sixrd_params.col(beta_idx).cwiseProduct(sixrd_params.col(c_idx)).asDiagonal()) *
                     idiff_ndiff_inv) -
                    sixrd_params.col(mu_idx).cwiseProduct(xmat.col(1)) -
                    sixrd_params.col(alpha_idx).cwiseProduct(xmat.col(1)) -
@@ -153,10 +128,45 @@ net_SIXRD_ode_inhom(Eigen::MatrixBase<DerivedA> &xmat, Eigen::EigenBase<DerivedB
 
     xmat.col(0) += -sixrd_params.col(beta_idx).cwiseProduct(
             sixrd_params.col(c_idx).cwiseProduct(new_s.cwiseProduct(idiff_ndiff_inv))) -
-                   (S * sixrd_params.col(beta_idx).cwiseProduct(sixrd_params.col(c_idx)).asDiagonal() *
+                   (S * (sixrd_params.col(beta_idx).cwiseProduct(sixrd_params.col(c_idx)).asDiagonal()) *
                     idiff_ndiff_inv); // S
 
 };
+
+auto print_banner() -> void;
+
+auto print_banner2() -> void;
+
+
+/*
+template<typename Scalar>
+using SIXRDState = Eigen::Matrix<Scalar, Eigen::Dynamic, 5>;
+
+
+
+
+
+template<typename Derived>
+auto infect_SIXRD_state(Eigen::MatrixBase<Derived> &x, Eigen::Index i, double N = 1) -> void {
+    SIXRDState_assert(x);
+
+    double change = x(i, 0) - (0 > x(i, 0) - N ? 0 : x(i, 0) - N);
+    x(i, 0) -= change;
+    x(i, 1) += change;
+}
+
+template<typename Derived>
+auto print_SIXRD_totals(Eigen::MatrixBase<Derived> &x) -> void {
+    SIXRDState_assert(x);
+
+    Eigen::RowVectorXd op_vec = x.colwise().sum();
+    std::cout << "S : " << op_vec[Sidx];
+    std::cout << ", I : " << op_vec[Iidx];
+    std::cout << ", X : " << op_vec[Xidx];
+    std::cout << ", R : " << op_vec[Ridx];
+    std::cout << ", D : " << op_vec[Didx];
+}
+
 
 
 template<typename Derived>
@@ -288,13 +298,13 @@ net_SIXRD_R0(const Eigen::MatrixBase<DerivedA> &xmat, const Eigen::EigenBase<Der
 
 }
 
-*/
+
 
 template<typename DerivedA, typename DerivedB>
 auto SIXRD_R0(Eigen::MatrixBase<DerivedA> &xmat, Eigen::MatrixBase<DerivedB> &sixrd_params) -> double {
-    /*
+
      * Find the reproduction number for the SIXRD model
-     */
+
     col_vector_assert(xmat);
     col_vector_assert(sixrd_params);
 
@@ -324,5 +334,7 @@ auto SIXRD_R0(Eigen::MatrixBase<DerivedA> &xmat, Eigen::MatrixBase<DerivedB> &si
 
     return eigen_values.maxCoeff();
 };
+*/
+
 
 #endif //EPIGRAPH_SIRX_NETWORK_H

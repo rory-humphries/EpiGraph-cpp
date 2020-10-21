@@ -8,11 +8,10 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
-#include <Eigen/Dense>
 #include "eigen_util.h"
 
 template<typename Derived>
-auto write_vector(Eigen::MatrixBase<Derived> vec, std::string fpath) -> void{
+auto write_vector(Eigen::MatrixBase<Derived> vec, std::string fpath) -> void {
     /*
      * Writes a column vector to csv.
      */
@@ -144,7 +143,9 @@ auto read_matrix(std::string path_to_file, bool header = false) -> Mat {
     }
     infile.close();
 
-    return Eigen::Map<Mat>(op_vec.data(), rows, op_vec.size() / rows);;
+    return Eigen::Map<Mat, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>>(op_vec.data(), rows, cols,
+                                                                             Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>(
+                                                                                     1, cols));
 }
 
 

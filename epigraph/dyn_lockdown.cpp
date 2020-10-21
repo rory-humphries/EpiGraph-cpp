@@ -1,6 +1,7 @@
-#include "../include/travel_model.h"
-#include "../include/sixrd_model.h"
-#include "../include/toml11/toml.hpp"
+#include "random_matrix.h"
+#include "sixrd_odes.h"
+#include "toml11/toml.hpp"
+
 
 #include <iostream>
 #include <random>
@@ -33,7 +34,6 @@ int main(int argc, char *argv[]) {
         const std::string node_population_path = toml::find<std::string>(file_paths, "node_population");
         const std::string node_county_path = toml::find<std::string>(file_paths, "node_county");
 
-
         // output file paths
         std::string agg_output_path = toml::find<std::string>(config, "output", "aggregate_path");
         std::string full_output_path = toml::find<std::string>(config, "output", "full_path");
@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
 
         // holds the SIXRD state of each node
         SIXRDState<double> x = SIXRDState<double>::Zero(dim, 5);
-        x.col(Sidx) = pop;
+        x.col(Sidx) = (pop.array() >= 0).select(pop, 1);
 
         // holds the R0 value for each time step
         std::vector<double> R0_vec;
@@ -81,12 +81,19 @@ int main(int argc, char *argv[]) {
         write_net_SIXRD_state_totals(x, agg_output_path, false);
 
         double run_time = 0;
-
         int t = 0;
-        const auto &phase_order = toml::find<std::vector<std::string>>(config, "parameters", "order");
-        for (const auto &current_phase : phase_order) {
+        int max_t = toml::find<int>(config, "parameters", "max_t");
+        int max_I = toml::find<int>(config, "parameters", "max_I");
 
+        const auto &phase_order = toml::find<std::vector<std::string>>(config, "parameters", "order");
+        for (int current_phase_idx = 0; current_phase_idx < phase_order.size(); current_phase_idx++) {
+
+            if (t > max_t)
+                break;
+
+            auto current_phase = phase_order[current_phase_idx];
             const auto &phase_params = toml::find(config, "parameters", current_phase);
+
 
             Eigen::Matrix<double, 5, 1> sixrd_param(5, 1);
 
@@ -100,8 +107,8 @@ int main(int argc, char *argv[]) {
             double compliance = toml::find<double>(phase_params, "compliance");
 
             MatrixXd new_travel_weights = (distance_mat.array() < max_dist).select(travel_weights,
-                                                                                   compliance * travel_weights);
-            rnd_travel.set_entry_probs(travel_weights);
+                                                                                   (1 - compliance) * travel_weights);
+            rnd_travel.set_row_distribution(travel_weights);
 
             int duration = toml::find<int>(phase_params, "duration");
             for (int tau = 0; tau < duration; tau++, t++) {
@@ -116,7 +123,7 @@ int main(int argc, char *argv[]) {
 
                 Eigen::SparseMatrix<double> adj(x.rows(), x.rows());
                 // Generate movements and store in adj matrix
-                rnd_travel.generate(adj, travel_pop);
+                rnd_travel.distribute_vec_over_matrix_rows(adj, travel_pop);
 
                 // Update the state matrix
                 net_SIXRD_ode(x, adj, sixrd_param);
@@ -130,11 +137,11 @@ int main(int argc, char *argv[]) {
                 write_net_SIXRD_state(x, std::to_string(t), full_output_path);
                 write_net_SIXRD_state_totals(x, agg_output_path, true);
 
+
                 // Output to console
                 std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
                 auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
                 run_time += time_span.count();
-                RowVectorXd op_vec = x.colwise().sum();
                 std::cout << "#################################\n";
                 std::cout << "Time step : " << t << "\n";
                 print_SIXRD_totals(x);
@@ -142,6 +149,10 @@ int main(int argc, char *argv[]) {
                 std::cout << "Run time : " << time_span.count() << "s , Total run time : " << run_time << "s\n";
                 std::cout << "#################################\n\n";
 
+                if (x.col(Iidx).sum() > max_I && current_phase_idx > 2) {
+                    current_phase_idx = 2;
+                    break;
+                }
 
             }
             write_vector(R0_vec, R0_path);

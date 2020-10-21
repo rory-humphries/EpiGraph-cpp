@@ -29,11 +29,11 @@ initial_seed = [257]
 max_t = 500
 
 # Maximum number of infected in country before country wide lockdown
-max_I = 175
+max_I = 1380
 
 # must list all phases in order of which they happen in the simulation, if you add any phases be sure to list it's
 # order here
-order = ["pre_lockdown", "lockdown", "phase_1", "phase_2", "phase_3", "phase_4", "phase_5", "post_lockdown"]
+order = ["pre_lockdown", "lockdown_1", "lockdown_2", "phase_1", "phase_2", "phase_3", "phase_4", "phase_5", "post_lockdown"]
 
 # initial parameters for the model
 
@@ -53,102 +53,116 @@ order = ["pre_lockdown", "lockdown", "phase_1", "phase_2", "phase_3", "phase_4",
 # with that value until changed again
 
 
-    [parameters.pre_lockdown]
+[parameters.pre_lockdown]
 
-    duration = 50
+duration = 50
 
-    beta = 0.37#0.37
-    mu = 0.1#0.1
-    c = 1.0
-    alpha = 0.0028
-    kappa = 0.1
-    max_dist = 1000.0
-    compliance = 0.5
+beta = 0.37#0.37
+mu = 0.1#0.1
+c = 1.0
+alpha = 0.0028
+kappa = 0.1
+max_dist = 1000.0
+compliance = 0.5
 
-    [parameters.lockdown]
+[parameters.lockdown_1] # add to 67
 
-    duration = 67
+duration = 15
 
-    beta = 0.37
-    mu = 0.1
-    c = 0.5
-    alpha = 0.0028
-    kappa = 0.1
-    max_dist = 2.0
-    compliance = 0.5
+beta = 0.37
+mu = 0.1
+c = 0.7
+alpha = 0.0028
+kappa = 0.1
+max_dist = 2.0
+compliance = 0.5
 
-    [parameters.phase_1]
+[parameters.lockdown_2]
 
-    duration = 21
+duration = 52
 
-    beta = 0.37
-    mu = 0.1
-    c = 0.3
-    alpha = 0.0028
-    kappa = 0.1
-    max_dist = 2.0
-    compliance = 0.5
+beta = 0.37
+mu = 0.1
+c = 0.4
+alpha = 0.0028
+kappa = 0.1
+max_dist = 2.0
+compliance = 0.5
 
-    [parameters.phase_2]
+[parameters.phase_1]
 
-    duration = 21
+duration = 21
 
-    beta = 0.37
-    mu = 0.1
-    c = 0.4
-    alpha = 0.0028
-    kappa = 0.1
-    max_dist = 5.0
-    compliance = 0.5
+beta = 0.37
+mu = 0.1
+c = 0.4
+alpha = 0.0028
+kappa = 0.1
+max_dist = 2.0
+compliance = 0.5
 
-    [parameters.phase_3]
+[parameters.phase_2]
 
-    duration = 21
+duration = 21
 
-    beta = 0.37
-    mu = 0.1
-    c = 0.5
-    alpha = 0.0028
-    kappa = 0.1
-    max_dist = 20.0
-    compliance = 0.5
+beta = 0.37
+mu = 0.1
+c = 0.5
+alpha = 0.0028
+kappa = 0.1
+max_dist = 5.0
+compliance = 0.5
 
-    [parameters.phase_4]
+[parameters.phase_3]
 
-    duration = 21
+duration = 21
 
-    beta = 0.37
-    mu = 0.1
-    c = 0.6
-    alpha = 0.0028
-    kappa = 0.1
-    max_dist = 20.0
-    compliance = 0.5
+beta = 0.37
+mu = 0.1
+c = 0.6
+alpha = 0.0028
+kappa = 0.1
+max_dist = 20.0
+compliance = 0.5
 
-    [parameters.phase_5]
+[parameters.phase_4]
 
-    duration = 21
+duration = 21
 
-    beta = 0.37
-    mu = 0.1
-    c = 0.7
-    alpha = 0.0028
-    kappa = 0.1
-    max_dist = 1000.0
-    compliance = 0.5
+beta = 0.37
+mu = 0.1
+c = 0.65
+alpha = 0.0028
+kappa = 0.1
+max_dist = 20.0
+compliance = 0.5
 
-    [parameters.post_lockdown]
+[parameters.phase_5]
+
+duration = 21
+
+beta = 0.37
+mu = 0.1
+c = 0.7
+alpha = 0.0028
+kappa = 0.1
+max_dist = 1000.0
+compliance = 1.0
+
+[parameters.post_lockdown]
 
 
-    duration = 400
+duration = 400
 
-    beta = 0.37
-    mu = 0.1
-    c = 1.0
-    alpha = 0.0028
-    kappa = 0.1
-    max_dist = 1000.0
-    compliance = 0.5
+beta = 0.37
+mu = 0.1
+c = 0.75
+alpha = 0.0028
+kappa = 0.1
+max_dist = 1000.0
+compliance = 1.0
+
+
 
 
 
