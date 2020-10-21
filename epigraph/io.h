@@ -8,7 +8,7 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
-#include "eigen_util.h"
+#include <epigraph/eigen_util.hpp>
 
 template<typename Derived>
 auto write_vector(Eigen::MatrixBase<Derived> vec, std::string fpath) -> void {
