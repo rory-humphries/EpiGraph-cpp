@@ -1,6 +1,6 @@
-[submodule "toml11"]
+[submodule "libs/spectra"]
+	path = libs/spectra
+	url = https://github.com/yixuan/spectra.git
+[submodule "libs/toml11"]
 	path = libs/toml11
 	url = https://github.com/ToruNiina/toml11.git
-[submodule "spectra"]
-	path = libs/git submodulespectra
-	url = https://github.com/yixuan/spectra.git
