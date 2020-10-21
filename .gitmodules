@@ -2,5 +2,5 @@
 	path = libs/toml11
 	url = https://github.com/ToruNiina/toml11.git
 [submodule "spectra"]
-	path = libs/spectra
+	path = libs/git submodulespectra
 	url = https://github.com/yixuan/spectra.git
