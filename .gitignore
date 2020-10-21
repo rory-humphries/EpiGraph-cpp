@@ -5,3 +5,5 @@ gifs/
 data/processed/*
 *.csv
 *.png
+
+!libs/*
