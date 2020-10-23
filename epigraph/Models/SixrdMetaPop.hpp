@@ -1,18 +1,19 @@
 //
-// Created by roryh on 20/10/2020.
+// Created by roryh on 21/10/2020.
 //
 
-#ifndef EPIGRAPH_SIXRD_MODEL_H
-#define EPIGRAPH_SIXRD_MODEL_H
+#ifndef EPIGRAPH_CPP_SIXRDMETAPOP_HPP
+#define EPIGRAPH_CPP_SIXRDMETAPOP_HPP
 
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
-#include <epigraph/sixrd_odes.hpp>
+#include <epigraph/SixrdOde.hpp>
 
-class SIXRDNetModelUP {
+
+class SixrdMetaPop {
 public:
     using state_type = Eigen::Matrix<double, Eigen::Dynamic, 5>;
-    using param_type = Eigen::Matrix<double, 5, 1>;
+    using param_type = Eigen::Matrix<double, Eigen::Dynamic, 5>;
     using coupling_type = Eigen::SparseMatrix<double>;
 
     enum StateId : Eigen::Index {
@@ -23,9 +24,9 @@ public:
         beta_idx, c_idx, mu_idx, alpha_idx, kappa_idx
     };
 
-    explicit SIXRDNetModelUP(Eigen::Index dim) : m_state(state_type::Zero(dim, 5)),
-                                                 m_params(param_type::Zero(dim)),
-                                                 m_coupling(dim, dim) {}
+    explicit SixrdMetaPop(Eigen::Index dim) : m_state(state_type::Zero(dim, 5)),
+                                              m_params(param_type::Zero(dim, 5)),
+                                              m_coupling(dim, dim) {}
 
     auto state() const -> const state_type & { return m_state; }
 
@@ -43,7 +44,9 @@ public:
 
     auto set_params(const param_type &params) -> void;
 
-    auto set_params(ParamId i, double val) -> void;
+    auto set_params(ParamId param_id, const Eigen::VectorXd &vec) -> void;
+
+    auto set_params(ParamId param_id, Eigen::Index i, double val) -> void;
 
     auto set_coupling(const coupling_type &coup) -> void;
 
@@ -53,14 +56,13 @@ private:
     coupling_type m_coupling;
 };
 
-auto derivative(const SIXRDNetModelUP &model) -> SIXRDNetModelUP::state_type;
+auto derivative(const SixrdMetaPop &model) -> SixrdMetaPop::state_type;
 
-auto print_totals(const SIXRDNetModelUP &model) -> void;
+auto print_totals(const SixrdMetaPop &model) -> void;
 
-auto write_state(const SIXRDNetModelUP &model, const std::string &id, std::string dir) -> void;
+auto write_state(const SixrdMetaPop &model, const std::string &id, std::string dir) -> void;
 
-auto write_state_totals(const SIXRDNetModelUP &model, const std::string &path_to_file,
+auto write_state_totals(const SixrdMetaPop &model, const std::string &path_to_file,
                         bool append_file) -> void;
 
-
-#endif //EPIGRAPH_SIXRD_MODEL_H
+#endif //EPIGRAPH_CPP_SIXRDMETAPOP_HPP

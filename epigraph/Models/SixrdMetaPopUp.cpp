@@ -1,62 +1,80 @@
 //
-// Created by roryh on 21/10/2020.
+// Created by roryh on 17/10/2020.
 //
-#include <epigraph/sixrd_net_model.hpp>
-#include <epigraph/sixrd_odes.hpp>
+
+#include <epigraph/Models/SixrdMetaPopUp.hpp>
+#include <epigraph/SixrdOde.hpp>
 
 #include <iostream>
 
-auto SIXRDNetModel::set_state(const SIXRDNetModel::state_type &x) -> void {
+auto print_banner() -> void {
+    std::cout <<
+              " _____       _  ____                 _    \n" <<
+              "| ____|_ __ (_)/ ___|_ __ __ _ _ __ | |__ \n" <<
+              "|  _| | '_ \\| | |  _| '__/ _` | '_ \\| '_ \\\n" <<
+              "| |___| |_) | | |_| | | | (_| | |_) | | | |\n" <<
+              "|_____| .__/|_|\\____|_|  \\__,_| .__/|_| |_|\n" <<
+              "      |_|                     |_|          \n";
+}
+
+auto print_banner2() -> void {
+    std::cout << "                                                                               \n"
+                 "                       ,,                                        ,,            \n"
+                 "`7MM\"\"\"YMM             db   .g8\"\"\"bgd                          `7MM            \n"
+                 "  MM    `7                .dP'     `M                            MM            \n"
+                 "  MM   d   `7MMpdMAo.`7MM dM'       ` `7Mb,od8 ,6\"Yb. `7MMpdMAo. MMpMMMb.      \n"
+                 "  MMmmMM     MM   `Wb  MM MM            MM' \"'8)   MM   MM   `Wb MM    MM      \n"
+                 "  MM   Y  ,  MM    M8  MM MM.    `7MMF' MM     ,pm9MM   MM    M8 MM    MM      \n"
+                 "  MM     ,M  MM   ,AP  MM `Mb.     MM   MM    8M   MM   MM   ,AP MM    MM      \n"
+                 ".JMMmmmmMMM  MMbmmd' .JMML. `\"bmmmdPY .JMML.  `Moo9^Yo. MMbmmd'.JMML  JMML.    \n"
+                 "             MM                                         MM                     \n"
+                 "           .JMML.                                     .JMML.                   \n"
+                 "";
+}
+
+auto SIXRDMetaPopUP::set_state(const SIXRDMetaPopUP::state_type &x) -> void {
     if ((x.array() < 0).any())
         throw std::domain_error("Encountered negative value");
     else
         m_state = x;
 }
 
-auto SIXRDNetModel::set_compartment(SIXRDNetModel::StateId comp,
-                                    const Eigen::VectorXd &vec) -> void {
+auto SIXRDMetaPopUP::set_compartment(SIXRDMetaPopUP::state_id comp,
+                                     const Eigen::VectorXd &vec) -> void {
     if ((vec.array() < 0).any())
         throw std::domain_error("Encountered negative number");
     else
         m_state.col(comp) = vec;
 }
 
-auto SIXRDNetModel::set_compartment(SIXRDNetModel::StateId comp, Eigen::Index i, double val) -> void {
+auto SIXRDMetaPopUP::set_compartment(SIXRDMetaPopUP::state_id comp, Eigen::Index i, double val) -> void {
     if (val < 0)
         throw std::domain_error("Encountered negative number");
     else
         m_state(i, comp) = val;
 }
 
-auto SIXRDNetModel::add_infected(Eigen::Index i, double N) -> void {
+auto SIXRDMetaPopUP::add_infected(Eigen::Index i, double N) -> void {
     double change = m_state(i, 0) - (0 > m_state(i, 0) - N ? 0 : m_state(i, 0) - N);
     m_state(i, 0) -= change;
     m_state(i, 1) += change;
 }
 
-auto SIXRDNetModel::set_params(const SIXRDNetModel::param_type &params) -> void {
+auto SIXRDMetaPopUP::set_params(const SIXRDMetaPopUP::param_type &params) -> void {
     if ((params.array() < 0).any() || (params.array() > 1).any())
         throw std::domain_error("Encountered value greater than 1 or less than 0");
     else
         m_params = params;
 }
 
-auto SIXRDNetModel::set_params(SIXRDNetModel::ParamId param_id, const Eigen::VectorXd &vec) -> void {
-    if ((vec.array() < 0).any() || (vec.array() > 1).any())
-        throw std::domain_error("Encountered value greater than 1 or less than 0");
-    else
-        m_params.col(param_id) = vec;
-}
-
-
-auto SIXRDNetModel::set_params(SIXRDNetModel::ParamId param_id, Eigen::Index i, double val) -> void {
+auto SIXRDMetaPopUP::set_params(SIXRDMetaPopUP::param_id i, double val) -> void {
     if ((val < 0) || (val > 1))
         throw std::domain_error("Encountered value greater than 1 or less than 0");
     else
-        m_params(param_id, i) = val;
+        m_params[i] = val;
 }
 
-auto SIXRDNetModel::set_coupling(const SIXRDNetModel::coupling_type &coup) -> void {
+auto SIXRDMetaPopUP::set_coupling(const SIXRDMetaPopUP::coupling_type &coup) -> void {
     Eigen::VectorXd coup_sum = coup * Eigen::VectorXd::Ones(coup.rows());
     if ((coup_sum.array() > m_state.rowwise().sum().array()).any())
         throw std::domain_error("Coupling row sums greater than population");
@@ -66,11 +84,11 @@ auto SIXRDNetModel::set_coupling(const SIXRDNetModel::coupling_type &coup) -> vo
         m_coupling = coup;
 }
 
-auto derivative(const SIXRDNetModel &model) -> SIXRDNetModel::state_type {
-    return net_SIXRD_ode_inhom(model.state(), model.coupling(), model.params());
+auto derivative(const SIXRDMetaPopUP &model) -> SIXRDMetaPopUP::state_type {
+    return net_SIXRD_ode(model.state(), model.coupling(), model.params());
 }
 
-auto print_totals(const SIXRDNetModel &model) -> void {
+auto print_totals(const SIXRDMetaPopUP &model) -> void {
     Eigen::RowVectorXd op_vec = model.state().colwise().sum();
     std::cout << "S : " << op_vec[Sidx];
     std::cout << ", I : " << op_vec[Iidx];
@@ -79,7 +97,7 @@ auto print_totals(const SIXRDNetModel &model) -> void {
     std::cout << ", D : " << op_vec[Didx];
 }
 
-auto write_state(const SIXRDNetModel &model, const std::string &id, std::string dir) -> void {
+auto write_state(const SIXRDMetaPopUP &model, const std::string &id, std::string dir) -> void {
 
     auto &x = model.state();
     std::ofstream myfile;
@@ -104,7 +122,7 @@ auto write_state(const SIXRDNetModel &model, const std::string &id, std::string 
     myfile.close();
 }
 
-auto write_state_totals(const SIXRDNetModel &model, const std::string &path_to_file,
+auto write_state_totals(const SIXRDMetaPopUP &model, const std::string &path_to_file,
                         bool append_file = false) -> void {
 
     auto &x = model.state();

@@ -10,7 +10,7 @@
 #include <map>
 #include <iostream>
 
-#include <epigraph/eigen_util.hpp>
+#include <epigraph/EigenUtil.hpp>
 
 
 enum SIXRD_idx : Eigen::Index {

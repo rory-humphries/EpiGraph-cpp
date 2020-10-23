@@ -7,7 +7,7 @@
 
 #include <Eigen/Core>
 #include <fstream>
-#include <epigraph/spatial_util.hpp>
+#include <epigraph/SpatialUtil.hpp>
 
 template<typename Derived>
 auto col_vector_assert(const Eigen::MatrixBase<Derived> &vec) -> void {

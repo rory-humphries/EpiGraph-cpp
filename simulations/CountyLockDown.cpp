@@ -1,5 +1,5 @@
-#include <epigraph/random_matrix.hpp>
-#include <epigraph/sixrd_net_model.hpp>
+#include <epigraph/RandomMatrix.hpp>
+#include <epigraph/Models/SixrdMetaPop.hpp>
 #include <libs/toml11/toml.hpp>
 
 #include <iostream>
@@ -9,7 +9,7 @@
 using namespace Eigen;
 using ArrayXXb = Array<bool, Dynamic, Dynamic>;
 
-using Model = SIXRDNetModel;
+using Model = SixrdMetaPop;
 
 int main(int argc, char *argv[]) {
 
@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
     auto pop = read_matrix<VectorXd>(node_population_path, true);
     int num_nodes = pop.rows();
 
-    // holds the SIXRD state of each node
+    // holds the SIXRD state_impl of each node
     Model x(num_nodes);
     x.set_compartment(Model::Sidx, (pop.array() > 0).select(pop.array(), 1));
 
@@ -130,7 +130,7 @@ int main(int argc, char *argv[]) {
         rnd_travel.distribute_vec_over_matrix_rows(adj, travel_pop);
         x.set_coupling(adj);
 
-        // Update the state matrix
+        // Update the state_impl matrix
         x.set_state(x.state() + derivative(x));
 
         // Output to file

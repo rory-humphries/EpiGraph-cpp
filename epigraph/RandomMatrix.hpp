@@ -12,8 +12,8 @@
 #include <Eigen/Sparse>
 #include <Eigen/Dense>
 
-#include <epigraph/distributions.hpp>
-#include <epigraph/io.h>
+#include <epigraph/Distributions.hpp>
+#include <epigraph/IO.hpp>
 
 class RandomMatrixGenerator {
 private:
