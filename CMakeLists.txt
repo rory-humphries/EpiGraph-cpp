@@ -5,10 +5,11 @@ set(CMAKE_CXX_STANDARD 17)
 
 # Configure library
 file(GLOB_RECURSE epigraph_src "epigraph/*.hpp" "epigraph/*.cpp")
-add_library(epigraph STATIC ${epigraph_src} epigraph/Core/Util.hpp)
+add_library(epigraph SHARED ${epigraph_src})
 
 find_package(Eigen3 REQUIRED NO_MODULE)
 target_link_libraries(epigraph Eigen3::Eigen)
+#target_precompile_headers(epigraph PUBLIC epigraph/Core/NetEpiComp.hpp)
 
 find_package(OpenMP)
 if (OpenMP_CXX_FOUND)
@@ -19,8 +20,6 @@ target_include_directories(epigraph PUBLIC ${CMAKE_CURRENT_LIST_DIR} ${CMAKE_CUR
 
 # configure executables
 add_subdirectory(simulations)
-add_subdirectory(simulations/test_dir)
-
 
 
 

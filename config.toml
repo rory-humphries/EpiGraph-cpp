@@ -1,41 +1,26 @@
 [file_paths]
 # path to file that holds the distribution of population proportions that commute.
-commuter_distribution = "../data/processed/ed_commuter_probs.csv"
+commuter_distribution = "../../data/processed/ed_commuter_probs.csv"
 # path to file that holds the distribution of travel distances
-travel_distribution = "../data/processed/ed_soa_travel_prob_mat_ratio_bands.csv"
+travel_distribution = "../../data/processed/ed_soa_travel_prob_mat_ratio_bands.csv"
 # path to file that holds the long lat positions for each node
-node_long_lat = "../data/processed/ed_soa_long_lat.csv"
+node_long_lat = "../../data/processed/ed_soa_long_lat.csv"
 # path to file that holds the population for each node
-node_population = "../data/processed/ed_soa_population.csv"
+node_population = "../../data/processed/ed_soa_population.csv"
 # path to file that holds the county for each node
-node_county = "../data/processed/ed_soa_county.csv"
+node_county = "../../data/processed/ed_soa_county.csv"
 
 [output]
 # the directory to output all the full output files
-full_path = "../output/"
+full_path = "../../output/"
 # the file path the comopartment totals at each time step in the network
-aggregate_path = "../agg_output.csv"
+aggregate_path = "../../agg_output.csv"
 # the file path for the reproduction numbers at each time step in the network
-R0_path = "../R0.csv"
+R0_path = "../../R0.csv"
 
 
 [parameters]
-
-# the vertices at which the disease first appears
-# the vertex indices are those given in the vertex_data file
-initial_seed = [257]
-
-# Maximum number of time steps, this is important for dynamic lockdowns when there is no set runtime
-max_t = 500
-
-# Maximum number of infected in country before country wide lockdown
-max_I = 1380
-
-# must list all phases in order of which they happen in the simulation, if you add any phases be sure to list it's
-# order here
-order = ["pre_lockdown", "lockdown_1", "lockdown_2", "phase_1", "phase_2", "phase_3", "phase_4", "phase_5", "post_lockdown"]
-
-# initial parameters for the model
+order = ["pre_lockdown", "lockdown_1", "lockdown_2", "phase_1", "phase_2", "phase_3", "phase_4", "phase_5", "post_lockdown", "6_week_lockdown", "christmas"]
 
 # beta = chance of infection on contact
 # mu = recovery rate
@@ -47,123 +32,23 @@ order = ["pre_lockdown", "lockdown_1", "lockdown_2", "phase_1", "phase_2", "phas
 
 # model starts in pre lockdown
 
-# each of the below subsections requires a duration (in days)
+# each duration is the number of days the phase lasts
+duration_list   = [50,     15,     52,     21,     21,     21,     21,     21,     45,     42,     300]
+beta_list       = [0.37,   0.37,   0.37,   0.37,   0.37,   0.37,   0.37,   0.37 ,  0.37,   0.37,   0.37]
+mu_list         = [0.1,    0.1,    0.1,    0.1,    0.1,    0.1,    0.1,    0.1,    0.1,    0.1,    0.1]
+c_list          = [1.0,    0.7,    0.4,    0.4,    0.5,    0.6,    0.65,   0.7,    0.75,   0.4,    0.7]
+alpha_list      = [0.0028, 0.0028, 0.0028, 0.0028, 0.0028, 0.0028, 0.0028, 0.0028, 0.0028, 0.0028, 0.0028]
+kappa_list      = [0.1,    0.1,    0.1,    0.1,    0.1,    0.1,    0.1,    0.1,    0.1,    0.1,    0.1]
+max_dist_list   = [1000.0, 2.0,    2.0,    2.0,    5.0,    5.0,    20.0,   1000.0, 1000.0, 5.0,    1000.0]
+compliance_list = [1.0,    0.8,    0.8,    0.8,    0.8,    0.8,    0.8,    0.8,    1.0,    1.0,    0.8]
 
-# to update any of the parameters above simply enter it's new value in any of the subsections, it will persist
-# with that value until changed again
+# the nodes at which the disease first appears
+initial_seed = [257]
 
+# Maximum number of time steps, this is important for dynamic lockdowns when there is no set runtime
+max_t = 500
 
-[parameters.pre_lockdown]
-
-duration = 50
-
-beta = 0.37#0.37
-mu = 0.1#0.1
-c = 1.0
-alpha = 0.0028
-kappa = 0.1
-max_dist = 1000.0
-compliance = 0.5
-
-[parameters.lockdown_1] # add to 67
-
-duration = 15
-
-beta = 0.37
-mu = 0.1
-c = 0.7
-alpha = 0.0028
-kappa = 0.1
-max_dist = 2.0
-compliance = 0.5
-
-[parameters.lockdown_2]
-
-duration = 52
-
-beta = 0.37
-mu = 0.1
-c = 0.4
-alpha = 0.0028
-kappa = 0.1
-max_dist = 2.0
-compliance = 0.5
-
-[parameters.phase_1]
-
-duration = 21
-
-beta = 0.37
-mu = 0.1
-c = 0.4
-alpha = 0.0028
-kappa = 0.1
-max_dist = 2.0
-compliance = 0.5
-
-[parameters.phase_2]
-
-duration = 21
-
-beta = 0.37
-mu = 0.1
-c = 0.5
-alpha = 0.0028
-kappa = 0.1
-max_dist = 5.0
-compliance = 0.5
-
-[parameters.phase_3]
-
-duration = 21
-
-beta = 0.37
-mu = 0.1
-c = 0.6
-alpha = 0.0028
-kappa = 0.1
-max_dist = 20.0
-compliance = 0.5
-
-[parameters.phase_4]
-
-duration = 21
-
-beta = 0.37
-mu = 0.1
-c = 0.65
-alpha = 0.0028
-kappa = 0.1
-max_dist = 20.0
-compliance = 0.5
-
-[parameters.phase_5]
-
-duration = 21
-
-beta = 0.37
-mu = 0.1
-c = 0.7
-alpha = 0.0028
-kappa = 0.1
-max_dist = 1000.0
-compliance = 1.0
-
-[parameters.post_lockdown]
-
-
-duration = 400
-
-beta = 0.37
-mu = 0.1
-c = 0.75
-alpha = 0.0028
-kappa = 0.1
-max_dist = 1000.0
-compliance = 1.0
-
-
-
-
+# Maximum number of infected in country before country wide lockdown
+max_I = 200
 
 

@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -19,6 +20,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 import datetime
+from tqdm import tqdm
 
 import os
 import geopandas as gpd
@@ -29,7 +31,7 @@ from shapely import wkt
 data_path = '../output/'
 gif_name = 'output.gif'
 
-cmap = 'viridis'
+cmap = 'RdYlGn_r'
 max_time = 500
 cb_axis_title = 'No. of infected per county'
 
@@ -69,9 +71,8 @@ for filename in range(1, max(max_time, len(files))):
     
 
 images = []
-for filename in range(1, min(max_time, len(files))):
-    print(filename)
-    fig, ax = plt.subplots(1, 1, figsize = (10,10))
+for filename in tqdm(range(1, min(max_time, len(files)))):
+    fig, ax = plt.subplots(1, 1, figsize = (7,7))
     df = pd.read_csv(data_path+str(filename)+".csv")
    
     N = df.N
@@ -105,7 +106,8 @@ for filename in range(1, min(max_time, len(files))):
     if output_gif:
         plt.savefig('tmp.png')
         images.append(imageio.imread("tmp.png"))
-    plt.show()
+    #plt.show()
+    plt.close(fig)
     
 if output_gif:
     imageio.mimsave('output.gif', images[0:499])

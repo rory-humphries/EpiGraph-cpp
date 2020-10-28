@@ -1,15 +1,15 @@
-#include <epigraph/RandomMatrix.hpp>
-#include <epigraph/Models/SixrdMetaPopUp.hpp>
+#include <epigraph/Random/RandomMatrix.hpp>
+#include <epigraph/Core/NetEpiComp.hpp>
+#include <epigraph/epigraph.hpp>
 #include <toml11/toml.hpp>
 
 #include <iostream>
 #include <chrono>
 
 using namespace Eigen;
-using Model = SIXRDMetaPopUP;
+using Model = NetEpiComp<1>;
 
 int main(int argc, char *argv[]) {
-    try {
         std::string config_path;
 
         if (argc < 2) {
@@ -23,6 +23,8 @@ int main(int argc, char *argv[]) {
         }
         print_banner2();
         std::cout << std::fixed << std::setprecision(2);
+        Eigen::initParallel();
+
 
         // toml stuff to read in all configs and paths
         const auto config = toml::parse(config_path);
@@ -40,6 +42,17 @@ int main(int argc, char *argv[]) {
         std::string full_output_path = toml::find<std::string>(config, "output", "full_path");
         std::string R0_path = toml::find<std::string>(config, "output", "R0_path");
 
+        // parameter lists
+        const auto &phase_order = toml::find<std::vector<std::string>>(config, "parameters", "order");
+        const auto &beta_list = toml::find<std::vector<double>>(config, "parameters", "beta_list");
+        const auto &c_list = toml::find<std::vector<double>>(config, "parameters", "c_list");
+        const auto &mu_list = toml::find<std::vector<double>>(config, "parameters", "mu_list");
+        const auto &alpha_list = toml::find<std::vector<double>>(config, "parameters", "alpha_list");
+        const auto &kappa_list = toml::find<std::vector<double>>(config, "parameters", "kappa_list");
+        const auto &compliance_list = toml::find<std::vector<double>>(config, "parameters", "compliance_list");
+        const auto &max_dist_list = toml::find<std::vector<double>>(config, "parameters", "max_dist_list");
+        const auto &duration_list = toml::find<std::vector<int>>(config, "parameters", "duration_list");
+
         // containers to hold the network data
 
         // holds the population of each node
@@ -47,8 +60,8 @@ int main(int argc, char *argv[]) {
         int num_nodes = pop.rows();
 
         // holds the SIXRD state_impl of each node
-        Model x(num_nodes);
-        x.set_compartment(Model::Sidx, (pop.array() > 0).select(pop.array(), 1));
+        Model x(num_nodes, 5);
+        x.set_state(SixrdId::S, (pop.array() > 0).select(pop.array(), 1));
 
         // Add initial infections
         auto rand_verts = toml::find<std::vector<int>>(config, "parameters", "initial_seed");
@@ -75,28 +88,23 @@ int main(int argc, char *argv[]) {
         write_state_totals(x, agg_output_path, false);
 
         double run_time = 0;
-
         int t = 0;
-        const auto &phase_order = toml::find<std::vector<std::string>>(config, "parameters", "order");
-        for (const auto &current_phase : phase_order) {
+        for (int current_phase = 0; current_phase < phase_order.size(); current_phase++) {
 
-            const auto &phase_params = toml::find(config, "parameters", current_phase);
-
-            x.set_params(Model::beta_idx, toml::find<double>(phase_params, "beta"));
-            x.set_params(Model::c_idx, toml::find<double>(phase_params, "c"));
-            x.set_params(Model::mu_idx, toml::find<double>(phase_params, "mu"));
-            x.set_params(Model::alpha_idx, toml::find<double>(phase_params, "alpha"));
-            x.set_params(Model::kappa_idx, toml::find<double>(phase_params, "kappa"));
-            double max_dist = toml::find<double>(phase_params, "max_dist");
-            double compliance = toml::find<double>(phase_params, "compliance");
+            x.set_params(SixrdParamId::beta, beta_list[current_phase]);
+            x.set_params(SixrdParamId::c, c_list[current_phase]);
+            x.set_params(SixrdParamId::mu, mu_list[current_phase]);
+            x.set_params(SixrdParamId::alpha, alpha_list[current_phase]);
+            x.set_params(SixrdParamId::kappa, kappa_list[current_phase]);
+            double max_dist = max_dist_list[current_phase];
+            double compliance = compliance_list[current_phase];
+            int duration = duration_list[current_phase];
 
             new_travel_weights = (distance_mat.array() < max_dist).select(travel_weights,
                                                                           (1 - compliance) * travel_weights);
             rnd_travel.set_row_distributions(new_travel_weights);
 
-            int duration = toml::find<int>(phase_params, "duration");
             for (int tau = 0; tau < duration; tau++, t++) {
-
                 std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
 
                 // Compute number of travellers from each node
@@ -107,12 +115,11 @@ int main(int argc, char *argv[]) {
 
                 // holds the adjacency matrix
                 // Generate movements and store in adj matrix
-                Eigen::SparseMatrix<double> adj(num_nodes, num_nodes);
-                rnd_travel.distribute_vec_over_matrix_rows(adj, travel_pop);
-                x.set_coupling(adj);
+                //Eigen::SparseMatrix<double> adj(num_nodes, num_nodes);
+                x.set_coupling(rnd_travel.distribute_vec_over_matrix_rows(travel_pop));
 
                 // Update the state_impl matrix
-                x.set_state(x.state() + derivative(x));
+                x.set_state(x.state() + sixrd_meta_pop_ode(x));
 
                 // Output to file
                 write_state(x, std::to_string(t), full_output_path);
@@ -135,11 +142,6 @@ int main(int argc, char *argv[]) {
         }
 
         std::cout << "Finished!" << std::endl;
-    }
-    catch (const std::exception &e) {
-        std::cerr << e.what();
-        return -1;
-    }
 
 }
 

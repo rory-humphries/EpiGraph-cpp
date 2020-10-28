@@ -24,10 +24,10 @@ save_figs = True
 
 data_path = '../output/'
 
-output_name = '2weeks_off_4weeks_on'
+output_name = '5_phase_and_6_week_lockdown'
 fig_name = output_name + '.png'
 data_name = output_name + '.csv'
-title = '2 weeks lockdown 4 weeks free'
+title = '5 phase and 6 week lockdown'
 max_time = 500
 #####################
 
@@ -83,7 +83,7 @@ plt.plot(dates, x, label = 'X', c = 'tab:green')
 #plt.plot(hist_data.date, hist_data.new_cases)
 
 
-event_durations = [50, 15, 52, 21, 21, 21, 21, 21, 400]
+event_durations = [49, 15, 52, 21, 21, 21, 21, 21, 45, 42, 400]
 
 event_dates = [start_date]
 for k in event_durations:

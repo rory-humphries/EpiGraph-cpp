@@ -12,8 +12,8 @@
 #include <Eigen/Sparse>
 #include <Eigen/Dense>
 
-#include <epigraph/Distributions.hpp>
-#include <epigraph/IO.hpp>
+#include <epigraph/Random/Distributions.hpp>
+#include <epigraph/Core/IO.hpp>
 
 class RandomMatrixGenerator {
 private:
@@ -22,7 +22,7 @@ private:
 
 public:
 
-    RandomMatrixGenerator(size_t dim) : dim(dim), m_row_distributions(dim) {}
+    explicit RandomMatrixGenerator(size_t dim) : dim(dim), m_row_distributions(dim) {}
 
 
     template<typename TIter>
@@ -39,19 +39,20 @@ public:
     }
 
     template<typename Derived>
-    auto set_row_distributions(Eigen::DenseBase<Derived> &weights) -> void {
+    auto set_row_distributions(const Eigen::DenseBase<Derived> &weights) -> void {
         if (weights.cols() != dim)
             throw std::invalid_argument("Matrix cols do not match model dimension");
 
+#pragma omp parallel for
         for (int i = 0; i < weights.rows(); i++) {
             Eigen::RowVectorXd row = weights.row(i);
             set_row_distribution(i, row.data(), row.data() + weights.cols());
         }
     }
 
-    template<typename DerivedA, typename DerivedB>
+    template<typename DerivedB>
     auto
-    distribute_vec_over_matrix_rows(Eigen::SparseMatrix<DerivedA> &adj, Eigen::MatrixBase<DerivedB> &vals) -> void {
+    distribute_vec_over_matrix_rows(Eigen::MatrixBase<DerivedB> &vals) -> Eigen::SparseMatrix<double> {
         /*
          * Add random edges to the network with a random number of travellers along each edge. The total number of
          * travelers out of v_src is decided by the commuter_dist distribution which gives the proportion of the
@@ -61,26 +62,36 @@ public:
          * outputs a destination vertex.
          */
 
-        //Eigen::SparseMatrix<double> adj_tmp(pop_map.size(), pop_map.size());
-        std::uniform_real_distribution<> uni_dist(0, 1);
+        Eigen::SparseMatrix<double> adj(vals.size(), vals.size());
 
         std::vector<Eigen::Triplet<double>> tripletList;
         tripletList.reserve(vals.sum());
-        std::map<std::pair<int, int>, double> edges_to_add;
+        std::random_device rd;
+        std::vector<std::mt19937> gen_vec;
+        for(int i =0; i<omp_get_max_threads();i++) gen_vec.emplace_back(rd());
 
+#pragma omp parallel for
         for (int i = 0; i < dim; i++) {
             std::discrete_distribution<int> &travel_distribution = m_row_distributions[i];
+            std::mt19937 &gen = gen_vec[omp_get_thread_num()];
 
+            std::vector<Eigen::Triplet<double>> p_vec;
+            p_vec.reserve(vals[i]);
             for (int n = 0; n < vals[i]; n++) {
+
                 // find the destination vertex from the travel distribution
-                int j = travel_distribution(global_engine());
-                tripletList.emplace_back(i, j, 1);
+                int j = travel_distribution(gen);
+                p_vec.emplace_back(i, j, 1);
             }
+#pragma omp critical
+            tripletList.insert(tripletList.end(), p_vec.begin(), p_vec.end());
+
         }
 
-        adj.resize(dim, dim);
         adj.setFromTriplets(tripletList.begin(), tripletList.end());
         adj.makeCompressed();
+        return adj;
+
     }
 
 };

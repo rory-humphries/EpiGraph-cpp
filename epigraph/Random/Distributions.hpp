@@ -14,11 +14,8 @@
 
 // not thread safe, careful with openMP
 std::mt19937 &global_engine();
-
+/*
 class PowerLaw {
-    /*
-     * Models a power law distribution.
-     */
 
 public:
     std::uniform_real_distribution<> uni_dist;
@@ -29,30 +26,30 @@ public:
     PowerLaw(double alpha, double xmin) : m_alpha(alpha), m_xmin(xmin), uni_dist(0.0, 1.0) {}
 
     static double pdf(double x, double alpha, double x_min) {
-        /*
+
          * The pdf for a power law distribution
-         */
+
         return ((alpha - 1) / x_min) * pow((x / x_min), -alpha);
     }
 
     static double non_normal_pdf(double x, double alpha, double x_min) {
-        /*
+
          * The non-normalised pdf (does not integrate to 1) for a power law distribution
-         */
+
         return pow(x, -alpha);
     }
 
     static double cdf(double u, double alpha, double x_min) {
-        /*
+
          * The cdf for a power law distribution
-         */
+
         return pow(u / x_min, -alpha + 1);
     }
 
     static double cdf_inv(double u, double alpha, double x_min) {
-        /*
+
         * The inverse cdf for a power law distribution
-        */
+
         return pow(x_min * u, -1 / (alpha - 1));
     }
 
@@ -62,7 +59,7 @@ public:
         return cdf_inv(r, m_alpha, m_xmin);
     }
 };
-
+*/
 
 struct ProbDist {
     std::discrete_distribution<> index_dist;
@@ -114,13 +111,7 @@ struct ProbDist {
         probs = index_dist.probabilities();
     }
 
-    ProbDist &operator=(ProbDist rhs) {
-        index_dist = rhs.index_dist;
-        vals = rhs.vals;
-        probs = index_dist.probabilities();
-
-        return *this;
-    }
+    ProbDist &operator=(const ProbDist& rhs);
 
 
     template<typename RandomGenerator>
@@ -129,47 +120,9 @@ struct ProbDist {
         return vals[index_dist(gen)];
     }
 
-    auto get_prob(double val) -> double {
-        auto it = std::lower_bound(vals.begin(), vals.end(), val);
-        if (it == vals.end()) it--;
-        int index = std::distance(vals.begin(), it);
-
-        return index_dist.probabilities().at(index);
-    }
+    auto get_prob(double val) -> double;
 };
 
-auto ProbDist_from_csv(std::string csv) -> ProbDist {
-    std::ifstream infile;
-    infile.open(csv);
-    if (infile.fail()) {
-        throw std::runtime_error("Failed to open file " + csv);
-    }
-    std::string line;
-
-    std::vector<std::pair<double, double>> val_prob_pairs;
-
-    double val;
-    double prob;
-
-    getline(infile, line, '\n'); // header
-
-    while (getline(infile, line, '\n')) {
-        std::istringstream ss(line);
-        std::string token;
-
-        std::getline(ss, token, ',');
-
-        val = stod(token);
-
-        std::getline(ss, token, ',');
-
-        prob = stod(token);
-
-        val_prob_pairs.push_back({val, prob});
-    }
-    infile.close();
-    return ProbDist(val_prob_pairs.begin(), val_prob_pairs.end());
-
-}
+auto ProbDist_from_csv(std::string csv) -> ProbDist;
 
 #endif //EPIGRAPH_DISTRIBUTIONS_H
