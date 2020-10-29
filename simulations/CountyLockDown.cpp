@@ -1,6 +1,4 @@
-#include <epigraph/Random/RandomMatrix.hpp>
-#include <epigraph/Core/NetEpiComp.hpp>
-#include <epigraph/epigraph.hpp>
+#include <EpiGraph/EpiGraph.hpp>
 #include <libs/toml11/toml.hpp>
 
 #include <iostream>
@@ -8,8 +6,9 @@
 #include <chrono>
 
 using namespace Eigen;
+using namespace EpiGraph
+;
 using ArrayXXb = Array<bool, Dynamic, Dynamic>;
-
 using Model = NetEpiComp<Eigen::Dynamic>;
 
 int main(int argc, char *argv[]) {
@@ -27,7 +26,8 @@ int main(int argc, char *argv[]) {
         return -1;
     }
     print_banner2();
-    std::cout << std::fixed << std::setprecision(2);
+
+    std::cout << "\n\nReading in data..." << std::flush;
 
     // toml stuff to read in all configs and paths
     const auto config = toml::parse(config_path);
@@ -110,6 +110,7 @@ int main(int argc, char *argv[]) {
     write_state(x, "0", full_output_path);
     write_state_totals(x, agg_output_path, false);
 
+    std::cout << "\nRunning simulation...";
     double run_time = 0;
 
 
@@ -181,14 +182,24 @@ int main(int argc, char *argv[]) {
         rnd_travel.set_row_distributions(new_travel_weights);
 
         // Output to console
+        auto comp_vec = x.state().colwise().sum();
+        printf("\n\n\33[2K");
+        std::cout << "Time step : " << t;
+
+        std::cout << "\n\n\33[2KS : " << comp_vec[SixrdId::S];
+        std::cout << "\n\33[2KI : " << comp_vec[SixrdId::I];
+        std::cout << "\n\33[2KX : " << comp_vec[SixrdId::X];
+        std::cout << "\n\33[2KR : " << comp_vec[SixrdId::R];
+        std::cout << "\n\33[2KD : " << comp_vec[SixrdId::D];
+
         std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
         auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
         run_time += time_span.count();
-        std::cout << "#################################\n";
-        std::cout << "Time step : " << t << "\n";
-        print_totals(x);
-        std::cout << "\nRun time : " << time_span.count() << "s , Total run time : " << run_time << "s\n";
-        std::cout << "#################################\n\n";
+
+        std::cout << "\n\n\33[2KTime per loop : " << time_span.count();
+        std::cout << "\n\33[2KTotal run time : " << run_time;
+        printf("\n");
+        printf("\x1b[12A");
 
 
     }

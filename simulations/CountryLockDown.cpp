@@ -1,12 +1,12 @@
-#include <epigraph/Random/RandomMatrix.hpp>
-#include <epigraph/Core/NetEpiComp.hpp>
-#include <epigraph/epigraph.hpp>
+#include <EpiGraph/EpiGraph.hpp>
 #include <toml11/toml.hpp>
 
 #include <iostream>
 #include <chrono>
 
 using namespace Eigen;
+using namespace EpiGraph;
+
 using Model = NetEpiComp<1>;
 
 int main(int argc, char *argv[]) {
@@ -22,10 +22,10 @@ int main(int argc, char *argv[]) {
             return -1;
         }
         print_banner2();
-        std::cout << std::fixed << std::setprecision(2);
         Eigen::initParallel();
 
 
+        std::cout << "\n\nReading in data..." << std::flush;
         // toml stuff to read in all configs and paths
         const auto config = toml::parse(config_path);
 
@@ -87,6 +87,7 @@ int main(int argc, char *argv[]) {
         write_state(x, "0", full_output_path);
         write_state_totals(x, agg_output_path, false);
 
+        std::cout << "\nRunning simulation...";
         double run_time = 0;
         int t = 0;
         for (int current_phase = 0; current_phase < phase_order.size(); current_phase++) {
@@ -125,23 +126,33 @@ int main(int argc, char *argv[]) {
                 write_state(x, std::to_string(t), full_output_path);
                 write_state_totals(x, agg_output_path, true);
 
+                //double R0 = net_SIXRD_R0(x.state(), x.coupling(), x.params().transpose());
+
                 // Output to console
+                auto comp_vec = x.state().colwise().sum();
+                printf("\n\n\33[2K");
+                std::cout << "Time step : " << t;
+
+                std::cout << "\n\n\33[2KS : " << comp_vec[SixrdId::S];
+                std::cout << "\n\33[2KI : " << comp_vec[SixrdId::I];
+                std::cout << "\n\33[2KX : " << comp_vec[SixrdId::X];
+                std::cout << "\n\33[2KR : " << comp_vec[SixrdId::R];
+                std::cout << "\n\33[2KD : " << comp_vec[SixrdId::D];
+
+                //std::cout << "\n\n\33[2KR0 : " << R0;
+
                 std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
                 auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
                 run_time += time_span.count();
 
-                std::cout << "Run time : " << time_span.count() << "s, ";
-                print_totals(x);
-                std::cout << std::flush;
-                std::cout << "\r";
-                //std::cout << x.params();
-                //std::cout << "R0 : " << R0 << "\n";
-                //std::cout << "Run time : " << time_span.count() << "s , Total run time : " << run_time << "s";
-
+                std::cout << "\n\n\33[2KTime per loop : " << time_span.count();
+                std::cout << "\n\33[2KTotal run time : " << run_time;
+                printf("\n");
+                printf("\x1b[12A");
             }
         }
 
-        std::cout << "Finished!" << std::endl;
+        std::cout << "\nFinished!" << std::endl;
 
 }
 

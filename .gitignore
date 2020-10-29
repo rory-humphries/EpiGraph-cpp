@@ -1,7 +1,18 @@
-.idea/
-cmake*/
-output/
-gifs/
-data/processed/*
-*.csv
-*.png
+# Ignore everything
+/*
+
+!.gitignore
+!.gitmodules
+!config.toml
+!CMakeLists.txt
+!LICENSE
+!README.md
+
+!EpiGraph/
+!simulations/
+!libs/
+!data_processing/
+!data/
+data/processed/ed_soa_travel_prob_mat_ratio_bands.csv
+!output/
+
