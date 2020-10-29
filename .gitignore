@@ -13,6 +13,6 @@
 !libs/
 !data_processing/
 !data/
-data/processed/ed_soa_travel_prob_mat_ratio_bands.csv
+data/processed/*
 !output/
 
