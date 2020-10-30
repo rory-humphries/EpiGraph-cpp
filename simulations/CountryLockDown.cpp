@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
         int num_nodes = pop.rows();
 
         // holds the SIXRD state_impl of each node
-        Model x(num_nodes, 5);
+        Model x(num_nodes, 5, 5);
         x.set_state(SixrdId::S, (pop.array() > 0).select(pop.array(), 1));
 
         // Add initial infections
@@ -127,6 +127,8 @@ int main(int argc, char *argv[]) {
                 write_state_totals(x, agg_output_path, true);
 
                 //double R0 = net_SIXRD_R0(x.state(), x.coupling(), x.params().transpose());
+                //Eigen::SparseMatrix<double> T = sixrd_next_gen_matrix(x.state(), x.coupling(), x.params());
+                //std::cout << (double)T.nonZeros() << ", " << (double)(T.rows()*T.cols()) << std::endl;
 
                 // Output to console
                 auto comp_vec = x.state().colwise().sum();

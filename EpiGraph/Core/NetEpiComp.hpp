@@ -36,9 +36,9 @@ namespace EpiGraph {
         using coupling_scalar_type = typename traits<NetEpiComp<ParamType>>::coupling_scalar_type;
         using coupling_type = Eigen::SparseMatrix<coupling_scalar_type>;
 
-        NetEpiComp(Eigen::Index dim, Eigen::Index compartments) {
+        NetEpiComp(Eigen::Index dim, Eigen::Index compartments, Eigen::Index num_params) {
             m_state = state_type::Zero(dim, compartments);
-            m_params = param_type::Zero((ParamType == 1 ? 1 : dim), compartments);
+            m_params = param_type::Zero((ParamType == 1 ? 1 : dim), num_params);
             m_coupling = coupling_type(dim, dim);
         }
 

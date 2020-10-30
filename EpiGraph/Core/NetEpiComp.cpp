@@ -8,12 +8,12 @@ namespace EpiGraph {
 
     template<>
     auto sixrd_meta_pop_ode(const NetEpiComp<1> &model) -> typename NetEpiComp<1>::state_type {
-        return net_SIXRD_ode(model.state(), model.coupling(), model.params().transpose());
+        return sixrd_net_ode(model.state(), model.coupling(), model.params().transpose());
     }
 
     template<>
     auto sixrd_meta_pop_ode(const NetEpiComp<Eigen::Dynamic> &model) -> typename NetEpiComp<Eigen::Dynamic>::state_type {
-        return net_SIXRD_ode_inhom(model.state(), model.coupling(), model.params());
+        return sixrd_net_ode_inhom(model.state(), model.coupling(), model.params());
     }
 
     // both are instantiated above

@@ -12,6 +12,11 @@
 
 namespace EpiGraph {
     template<typename Derived>
+    auto vector_assert(const Eigen::MatrixBase<Derived> &vec) -> void {
+        static_assert(Derived::IsVectorAtCompileTime, "Expected a vector");
+    }
+
+    template<typename Derived>
     auto col_vector_assert(const Eigen::MatrixBase<Derived> &vec) -> void {
         static_assert(Derived::ColsAtCompileTime == 1, "Expected a column vector");
     }

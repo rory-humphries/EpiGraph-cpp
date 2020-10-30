@@ -13,6 +13,7 @@
 #include <iostream>
 
 #include <EpiGraph/Eigen/EigenUtil.hpp>
+#include <EpiGraph/Eigen/SpectralProperties.hpp>
 
 namespace EpiGraph {
 
@@ -25,8 +26,7 @@ namespace EpiGraph {
     };
 
     template<typename DerivedA, typename DerivedB, typename DerivedC>
-    auto
-    net_SIXRD_ode(const Eigen::MatrixBase<DerivedA> &x, const Eigen::EigenBase<DerivedB> &adj_,
+    auto sixrd_net_ode(const Eigen::MatrixBase<DerivedA> &x, const Eigen::EigenBase<DerivedB> &adj_,
                   const Eigen::MatrixBase<DerivedC> &sixrd_params) -> DerivedA {
         /*
          * xmat is expected to be an n x 5 matrix (columns checked at compile time) where the following column indices
@@ -77,11 +77,10 @@ namespace EpiGraph {
                       beta * c * S * idiff_ndiff_inv; // S
 
         return dxdt;
-    };
+    }
 
     template<typename DerivedA, typename DerivedB, typename DerivedC>
-    auto
-    net_SIXRD_ode_inhom(const Eigen::MatrixBase<DerivedA> &xmat, const Eigen::EigenBase<DerivedB> &adj_,
+    auto sixrd_net_ode_inhom(const Eigen::MatrixBase<DerivedA> &xmat, const Eigen::EigenBase<DerivedB> &adj_,
                         const Eigen::MatrixBase<DerivedC> &sixrd_params) -> DerivedA {
         /*
          * xmat is expected to be an n x 5 matrix (columns checked at compile time) where the following column indices
@@ -132,17 +131,16 @@ namespace EpiGraph {
                        idiff_ndiff_inv); // S
 
         return dxdt;
-    };
+    }
 
     template<typename DerivedA, typename DerivedB, typename DerivedC>
-    auto
-    net_SIXRD_R0(const Eigen::MatrixBase<DerivedA> &xmat, const Eigen::SparseMatrixBase<DerivedB> &adj,
-                 const Eigen::MatrixBase<DerivedC> &param) -> double {
-
+    auto sixrd_next_gen_matrix(const Eigen::MatrixBase<DerivedA> &xmat, const Eigen::EigenBase<DerivedB> &adj_,
+                               const Eigen::MatrixBase<DerivedC> &param) -> DerivedB {
         /*
          * Find the reproduction number for the network SIXRD model
          */
 
+        vector_assert(param);
         int dim = xmat.rows();
 
         double alpha = param[SixrdParamId::alpha];
@@ -151,7 +149,7 @@ namespace EpiGraph {
         double mu = param[SixrdParamId::mu];
         double kappa = param[SixrdParamId::kappa];
 
-        //const DerivedB &adj = adj_.derived();
+        const DerivedB &adj = adj_.derived();
 
         Eigen::VectorXd n = xmat.rowwise().sum().array();
         for (int i = 0; i < xmat.rows(); i++) {
@@ -163,7 +161,6 @@ namespace EpiGraph {
         DerivedB S = (xmat.col(SixrdId::S).cwiseProduct(n_inv)).asDiagonal() * adj;
 
         Eigen::VectorXd one_vec = Eigen::VectorXd::Ones(dim);
-        Eigen::Array<double, Eigen::Dynamic, 1> one_arr_vec = Eigen::VectorXd::Ones(dim).array();
         Eigen::RowVectorXd one_rowvec = Eigen::RowVectorXd::Ones(dim);
 
         Eigen::VectorXd n_diff = n + (one_rowvec * adj).transpose() - (adj * one_vec);
@@ -174,37 +171,25 @@ namespace EpiGraph {
         DerivedB mat2 = DerivedB((one_vec.array() - ((adj * one_vec).array() / n.array())).matrix().asDiagonal());
         mat2 += DerivedB(adj.transpose() * (n.cwiseInverse().asDiagonal()));
         mat2 = n_diff_inv.asDiagonal() * mat2;
-        //Eigen::SparseMatrix<double> mat2 = n_diff_inv.asDiagonal() * (Eigen::SparseMatrix<double>(
-        //        (((one_vec.array() - (adj * one_vec).array() / n.array())).matrix().asDiagonal())) +
-        //                                                              Eigen::SparseMatrix<double>((adj.transpose()) *
-        //                                                                                          n.cwiseInverse().asDiagonal()));
 
         DerivedB mat3 = S * mat2;
 
-        //DerivedB mat = (n_diff_inv.asDiagonal() * DerivedB((one_vec - (DerivedB(n_inv.asDiagonal() * adj)) * one_vec).asDiagonal()) + DerivedB(adj.transpose() * n_inv.asDiagonal()));
+        DerivedB T = ((beta * c) / (mu + alpha + kappa)) * (mat1.asDiagonal() * mat2 + mat3);
+
+        return T;
+    }
+
+    template<typename DerivedA, typename DerivedB, typename DerivedC>
+    auto sixrd_net_r0(const Eigen::MatrixBase<DerivedA> &xmat, const Eigen::SparseMatrixBase<DerivedB> &adj,
+                 const Eigen::MatrixBase<DerivedC> &param) -> double {
+
+        /*
+         * Find the reproduction number for the network SIXRD model
+         */
 
 
-        //DerivedB T = ((beta * c) / (mu + alpha + kappa)) *( DerivedB(xmat.col(SixrdId::S).asDiagonal()) * DerivedB(n_inv.asDiagonal())+ (S * mat));
-        Eigen::SparseMatrix<double> T = ((beta * c) / (mu + alpha + kappa)) * (mat1.asDiagonal() * mat2 + mat3);
-        T.makeCompressed();
-
-
-        Spectra::SparseGenMatProd<double> op(T);
-        // Construct eigen solver object, requesting the largest
-        // (in magnitude, or norm) three eigenvalues
-        Spectra::GenEigsSolver<double, Spectra::LARGEST_MAGN, Spectra::SparseGenMatProd<double> > eigs(&op, 1, 6);
-        // Initialize and compute
-        eigs.init();
-        int nconv = eigs.compute();
-        // Retrieve results
-        Eigen::VectorXcd evalues;
-        if (eigs.info() == Spectra::SUCCESSFUL) {
-            evalues = eigs.eigenvalues();
-            return evalues.cwiseAbs().maxCoeff();
-        } else {
-            throw std::runtime_error("Could not find eigenvalue");
-        }
-
+        DerivedB T = sixrd_next_gen_matrix(xmat, adj, param);
+        return SpectralRadius(T);
     }
 
 /*
