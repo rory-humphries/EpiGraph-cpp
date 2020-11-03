@@ -18,8 +18,7 @@ namespace EpiGraph {
         using param_type = typename Base::param_type;
         using coupling_type = typename Base::coupling_type;
 
-        SIXRDNetMetaPop(Eigen::Index dim, Eigen::Index compartments, Eigen::Index num_params)
-                : NetMetaPop<StateMat, ParamType, CoupType>(dim, compartments, num_params) {}
+        explicit SIXRDNetMetaPop(Eigen::Index dim) : NetMetaPop<StateMat, ParamType, CoupType>(dim, 5, 5) {}
 
     private:
         using Base::m_state;

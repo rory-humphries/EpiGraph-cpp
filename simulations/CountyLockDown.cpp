@@ -50,7 +50,6 @@ int main(int argc, char *argv[]) {
     const std::string node_population_path = toml::find<std::string>(file_paths, "node_population");
     const std::string node_county_path = toml::find<std::string>(file_paths, "node_county");
 
-
     // output file paths
     std::string agg_output_path = toml::find<std::string>(config, "output", "aggregate_path");
     std::string full_output_path = toml::find<std::string>(config, "output", "full_path");
@@ -78,7 +77,7 @@ int main(int argc, char *argv[]) {
     int num_nodes = pop.rows();
 
     // holds the SIXRD state_impl of each node
-    Model x(num_nodes, 5, 5);
+    Model x(num_nodes);
     x.set_state(SixrdId::S, (pop.array() > 0).select(pop.array(), 1));
 
     // Add initial infections
@@ -117,7 +116,7 @@ int main(int argc, char *argv[]) {
     ProbDist commuter_dist = ProbDist_from_csv(commuter_distribution_path);
 
     // Write initial conditions
-    write_state(x, "0", full_output_path);
+    write_state(x, full_output_path+"0.csv", "S,I,X,R,D,N");
     //write_state_totals(x, agg_output_path, false);
 
     std::cout << "\nRunning simulation...";
@@ -150,7 +149,7 @@ int main(int argc, char *argv[]) {
         x.set_state(x.state() + dXdt(x));
 
         // Output to file
-        write_state(x, std::to_string(t), full_output_path);
+        write_state(x, full_output_path+std::to_string(t)+".csv", "S,I,X,R,D,N");
         //write_state_totals(x, agg_output_path, true);
 
         county_I = accumulate_groups(x.state().col(SixrdId::I), county);

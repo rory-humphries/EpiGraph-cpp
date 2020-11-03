@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
         int num_nodes = pop.rows();
 
         // holds the SIXRD state_impl of each node
-        Model x(num_nodes, 5, 5);
+        Model x(num_nodes);
         x.set_state(SixrdId::S, (pop.array() > 0).select(pop.array(), 1));
 
         // Add initial infections
