@@ -2,6 +2,7 @@
 // Created by roryh on 22/06/2020.
 //
 #include <EpiGraph/Random/Distributions.hpp>
+
 #include <random>
 
 namespace EpiGraph {

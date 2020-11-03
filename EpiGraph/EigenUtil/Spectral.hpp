@@ -2,18 +2,17 @@
 // Created by roryh on 29/10/2020.
 //
 
-#ifndef EPIGRAPH_CPP_SPECTRALPROPERTIES_HPP
-#define EPIGRAPH_CPP_SPECTRALPROPERTIES_HPP
+#ifndef EPIGRAPH_CPP_SPECTRAL_HPP
+#define EPIGRAPH_CPP_SPECTRAL_HPP
 
 
-#include <Eigen/Sparse>
 #include <Spectra/GenEigsSolver.h>
 #include <Spectra/MatOp/SparseGenMatProd.h>
 #include <Spectra/MatOp/DenseGenMatProd.h>
 
 
 template<typename Derived>
-auto SpectralRadius(Eigen::MatrixBase<Derived> mat, int ev = 6) {
+auto SpectralRadius(const Eigen::MatrixBase<Derived>& mat, int ev = 6) {
     using Scalar = typename Derived::Scalar;
     Spectra::SparseGenMatProd<Scalar> op(mat);
     // Construct eigen solver object, requesting the largest
@@ -33,7 +32,7 @@ auto SpectralRadius(Eigen::MatrixBase<Derived> mat, int ev = 6) {
 }
 
 template<typename Derived>
-auto SpectralRadius(Eigen::SparseMatrixBase<Derived> mat, int ev = 6) {
+auto SpectralRadius(const Eigen::SparseMatrixBase<Derived>& mat, int ev = 6) {
     using Scalar = typename Derived::Scalar;
     Spectra::SparseGenMatProd<Scalar> op(mat);
     // Construct eigen solver object, requesting the largest
@@ -51,4 +50,4 @@ auto SpectralRadius(Eigen::SparseMatrixBase<Derived> mat, int ev = 6) {
         throw std::runtime_error("Could not find eigenvalue");
     }
 }
-#endif //EPIGRAPH_CPP_SPECTRALPROPERTIES_HPP
+#endif //EPIGRAPH_CPP_SPECTRAL_HPP

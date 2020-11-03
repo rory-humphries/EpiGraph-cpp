@@ -5,9 +5,9 @@
 #ifndef EPIGRAPH_CPP_EPICOMP_HPP
 #define EPIGRAPH_CPP_EPICOMP_HPP
 
+#include <EpiGraph/Core/Util.hpp>
 
 #include <Eigen/Dense>
-#include <EpiGraph/Core/Util.hpp>
 
 namespace EpiGraph {
     class EpiComp;
@@ -16,6 +16,41 @@ namespace EpiGraph {
     struct traits<EpiComp> {
         using state_scalar_type = double;
         using param_scalar_type = double;
+    };
+
+    template<typename Derived, typename StateMat, typename ParamMat>
+    class CompParamBase {
+    public:
+        using state_type = Eigen::Matrix<typename StateMat::Scalar, StateMat::RowsAtCompileTime, StateMat::ColsAtCompileTime>;
+        using param_type = Eigen::Matrix<typename StateMat::Scalar, StateMat::RowsAtCompileTime, StateMat::ColsAtCompileTime>;
+
+        auto state() const -> const state_type & {
+            return m_state;
+        }
+
+        auto params() const -> const state_type & {
+            return m_state;
+        }
+
+        auto set_state(const state_type &x) -> void {
+            static_cast<Derived*>(this)->set_state(x);
+        }
+
+        auto set_compartment(Eigen::Index comp, double val) -> void {
+            static_cast<Derived*>(this)->set_compartment(comp, val);
+        }
+
+        auto set_params(const param_type &params) -> void {
+            static_cast<Derived*>(this)->set_params(params);
+        }
+
+        auto set_params(Eigen::Index i, double val) -> void {
+            static_cast<Derived*>(this)->set_params(i, val);
+        }
+
+    private:
+        state_type m_state;
+        param_type m_params;
     };
 
     class EpiComp {

@@ -1,4 +1,13 @@
 #include <EpiGraph/EpiGraph.hpp>
+#include <EpiGraph/Core/IO.hpp>
+#include <EpiGraph/EigenUtil/IO.hpp>
+#include <EpiGraph/Models/SIXRDNetMetaPop.hpp>
+#include <EpiGraph/Random/Distributions.hpp>
+#include <EpiGraph/Random/RandomMatrix.hpp>
+#include <EpiGraph/Spatial/SpatialUtil.hpp>
+
+#include <Eigen/Sparse>
+
 #include <toml11/toml.hpp>
 
 #include <iostream>
@@ -7,7 +16,7 @@
 using namespace Eigen;
 using namespace EpiGraph;
 
-using Model = NetEpiComp<1>;
+using Model = SIXRDNetMetaPop<MatrixXd, RowVectorXd, SparseMatrix<double>>;
 
 int main(int argc, char *argv[]) {
         std::string config_path;
@@ -65,7 +74,7 @@ int main(int argc, char *argv[]) {
 
         // Add initial infections
         auto rand_verts = toml::find<std::vector<int>>(config, "parameters", "initial_seed");
-        for (auto &rand_v: rand_verts) x.add_infected(rand_v, 2);
+        for (auto &rand_v: rand_verts) x.move_state(SixrdId::S, SixrdId::I, rand_v, 2);
 
         // holds the weights/probabilities of each node travelling to another
         MatrixXd travel_weights = read_matrix<MatrixXd>(travel_weights_path);
@@ -84,8 +93,8 @@ int main(int argc, char *argv[]) {
         ProbDist commuter_dist = ProbDist_from_csv(commuter_distribution_path);
 
         // Write initial conditions
-        write_state(x, "0", full_output_path);
-        write_state_totals(x, agg_output_path, false);
+        write_state(x, full_output_path+"0.csv", "S,I,X,R,D,N");
+        //write_state_totals(x, agg_output_path, false);
 
         std::cout << "\nRunning simulation...";
         double run_time = 0;
@@ -116,19 +125,16 @@ int main(int argc, char *argv[]) {
 
                 // holds the adjacency matrix
                 // Generate movements and store in adj matrix
-                //Eigen::SparseMatrix<double> adj(num_nodes, num_nodes);
+                //EigenUtil::SparseMatrix<double> adj(num_nodes, num_nodes);
                 x.set_coupling(rnd_travel.distribute_vec_over_matrix_rows(travel_pop));
 
                 // Update the state_impl matrix
-                x.set_state(x.state() + sixrd_meta_pop_ode(x));
+                x.set_state(x.state() + dXdt(x));
 
                 // Output to file
-                write_state(x, std::to_string(t), full_output_path);
-                write_state_totals(x, agg_output_path, true);
+                write_state(x, full_output_path+std::to_string(t)+".csv", "S,I,X,R,D,N");
 
-                //double R0 = net_SIXRD_R0(x.state(), x.coupling(), x.params().transpose());
-                //Eigen::SparseMatrix<double> T = sixrd_next_gen_matrix(x.state(), x.coupling(), x.params());
-                //std::cout << (double)T.nonZeros() << ", " << (double)(T.rows()*T.cols()) << std::endl;
+                //double R0 = r0(x);
 
                 // Output to console
                 auto comp_vec = x.state().colwise().sum();

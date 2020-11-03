@@ -1,4 +1,15 @@
 #include <EpiGraph/EpiGraph.hpp>
+#include <EpiGraph/Core/IO.hpp>
+#include <EpiGraph/EigenUtil/Accumulate.hpp>
+#include <EpiGraph/EigenUtil/IO.hpp>
+#include <EpiGraph/EigenUtil/LinAlg.hpp>
+#include <EpiGraph/Models/SIXRDNetMetaPop.hpp>
+#include <EpiGraph/Random/Distributions.hpp>
+#include <EpiGraph/Random/RandomMatrix.hpp>
+#include <EpiGraph/Spatial/SpatialUtil.hpp>
+
+#include <Eigen/Sparse>
+
 #include <libs/toml11/toml.hpp>
 
 #include <iostream>
@@ -6,10 +17,9 @@
 #include <chrono>
 
 using namespace Eigen;
-using namespace EpiGraph
-;
+using namespace EpiGraph;
 using ArrayXXb = Array<bool, Dynamic, Dynamic>;
-using Model = NetEpiComp<Eigen::Dynamic>;
+using Model = SIXRDNetMetaPop<MatrixXd, MatrixXd, SparseMatrix<double>>;
 
 int main(int argc, char *argv[]) {
 
@@ -68,12 +78,12 @@ int main(int argc, char *argv[]) {
     int num_nodes = pop.rows();
 
     // holds the SIXRD state_impl of each node
-    Model x(num_nodes, 5);
+    Model x(num_nodes, 5, 5);
     x.set_state(SixrdId::S, (pop.array() > 0).select(pop.array(), 1));
 
     // Add initial infections
     auto rand_verts = toml::find<std::vector<int>>(config, "parameters", "initial_seed");
-    for (auto &rand_v: rand_verts) x.add_infected(rand_v, 2);
+    for (auto &rand_v: rand_verts) x.move_state(SixrdId::S, SixrdId::I, rand_v, 2);
 
     // holds the weights/probabilities of each node travelling to another
     MatrixXd travel_weights = read_matrix<MatrixXd>(travel_weights_path);
@@ -108,7 +118,7 @@ int main(int argc, char *argv[]) {
 
     // Write initial conditions
     write_state(x, "0", full_output_path);
-    write_state_totals(x, agg_output_path, false);
+    //write_state_totals(x, agg_output_path, false);
 
     std::cout << "\nRunning simulation...";
     double run_time = 0;
@@ -137,11 +147,11 @@ int main(int argc, char *argv[]) {
         x.set_coupling(rnd_travel.distribute_vec_over_matrix_rows(travel_pop));
 
         // Update the state_impl matrix
-        x.set_state(x.state() + sixrd_meta_pop_ode(x));
+        x.set_state(x.state() + dXdt(x));
 
         // Output to file
         write_state(x, std::to_string(t), full_output_path);
-        write_state_totals(x, agg_output_path, true);
+        //write_state_totals(x, agg_output_path, true);
 
         county_I = accumulate_groups(x.state().col(SixrdId::I), county);
 

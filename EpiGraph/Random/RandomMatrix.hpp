@@ -5,15 +5,13 @@
 #ifndef EPIGRAPH_RANDOM_MATRIX_H
 #define EPIGRAPH_RANDOM_MATRIX_H
 
+#include <Eigen/Sparse>
+#include <Eigen/Dense>
+
 #include <vector>
 #include <random>
 #include <memory>
 #include <algorithm>
-#include <Eigen/Sparse>
-#include <Eigen/Dense>
-
-#include <EpiGraph/Random/Distributions.hpp>
-#include <EpiGraph/Core/IO.hpp>
 
 namespace EpiGraph {
 

@@ -7,13 +7,9 @@
 #define EPIGRAPH_SIRX_NETWORK_H
 
 #include <Eigen/Dense>
-#include <Spectra/GenEigsSolver.h>
-#include <Spectra/MatOp/SparseGenMatProd.h>
+
 #include <map>
 #include <iostream>
-
-#include <EpiGraph/Eigen/EigenUtil.hpp>
-#include <EpiGraph/Eigen/SpectralProperties.hpp>
 
 namespace EpiGraph {
 
@@ -26,8 +22,8 @@ namespace EpiGraph {
     };
 
     template<typename DerivedA, typename DerivedB, typename DerivedC>
-    auto sixrd_net_ode(const Eigen::MatrixBase<DerivedA> &x, const Eigen::EigenBase<DerivedB> &adj_,
-                  const Eigen::MatrixBase<DerivedC> &sixrd_params) -> DerivedA {
+    auto sixrd_net_ode_uni_params(const Eigen::MatrixBase<DerivedA> &x, const Eigen::EigenBase<DerivedB> &adj_,
+                                  const Eigen::MatrixBase<DerivedC> &sixrd_params) -> DerivedA {
         /*
          * xmat is expected to be an n x 5 matrix (columns checked at compile time) where the following column indices
          * represent 0=S, 1=I, 2=X, 3=R, 4=D. The rows represent the nodes of the system.
@@ -80,8 +76,8 @@ namespace EpiGraph {
     }
 
     template<typename DerivedA, typename DerivedB, typename DerivedC>
-    auto sixrd_net_ode_inhom(const Eigen::MatrixBase<DerivedA> &xmat, const Eigen::EigenBase<DerivedB> &adj_,
-                        const Eigen::MatrixBase<DerivedC> &sixrd_params) -> DerivedA {
+    auto sixrd_net_ode(const Eigen::MatrixBase<DerivedA> &xmat, const Eigen::EigenBase<DerivedB> &adj_,
+                       const Eigen::MatrixBase<DerivedC> &sixrd_params) -> DerivedA {
         /*
          * xmat is expected to be an n x 5 matrix (columns checked at compile time) where the following column indices
          * represent 0=S, 1=I, 2=X, 3=R, 4=D. The rows represent the nodes of the system.
@@ -134,7 +130,7 @@ namespace EpiGraph {
     }
 
     template<typename DerivedA, typename DerivedB, typename DerivedC>
-    auto sixrd_next_gen_matrix(const Eigen::MatrixBase<DerivedA> &xmat, const Eigen::EigenBase<DerivedB> &adj_,
+    auto sixrd_next_gen_matrix(const Eigen::MatrixBase<DerivedA> &xmat, const Eigen::EigenBase<DerivedB> &adj,
                                const Eigen::MatrixBase<DerivedC> &param) -> DerivedB {
         /*
          * Find the reproduction number for the network SIXRD model
@@ -149,7 +145,7 @@ namespace EpiGraph {
         double mu = param[SixrdParamId::mu];
         double kappa = param[SixrdParamId::kappa];
 
-        const DerivedB &adj = adj_.derived();
+        const DerivedB &adj_d = adj.derived();
 
         Eigen::VectorXd n = xmat.rowwise().sum().array();
         for (int i = 0; i < xmat.rows(); i++) {
@@ -158,18 +154,18 @@ namespace EpiGraph {
         }
         Eigen::VectorXd n_inv = n.cwiseInverse();
 
-        DerivedB S = (xmat.col(SixrdId::S).cwiseProduct(n_inv)).asDiagonal() * adj;
+        DerivedB S = (xmat.col(SixrdId::S).cwiseProduct(n_inv)).asDiagonal() * adj_d;
 
         Eigen::VectorXd one_vec = Eigen::VectorXd::Ones(dim);
         Eigen::RowVectorXd one_rowvec = Eigen::RowVectorXd::Ones(dim);
 
-        Eigen::VectorXd n_diff = n + (one_rowvec * adj).transpose() - (adj * one_vec);
+        Eigen::VectorXd n_diff = n + (one_rowvec * adj_d).transpose() - (adj_d * one_vec);
         Eigen::VectorXd n_diff_inv = n_diff.cwiseInverse();
 
         Eigen::VectorXd mat1 = xmat.col(SixrdId::S) - S * one_vec;
 
-        DerivedB mat2 = DerivedB((one_vec.array() - ((adj * one_vec).array() / n.array())).matrix().asDiagonal());
-        mat2 += DerivedB(adj.transpose() * (n.cwiseInverse().asDiagonal()));
+        DerivedB mat2((one_vec.array() - ((adj_d * one_vec).array() / n.array())).matrix().asDiagonal());
+        mat2 += DerivedB(adj_d.transpose() * (n.cwiseInverse().asDiagonal()));
         mat2 = n_diff_inv.asDiagonal() * mat2;
 
         DerivedB mat3 = S * mat2;
@@ -181,7 +177,7 @@ namespace EpiGraph {
 
     template<typename DerivedA, typename DerivedB, typename DerivedC>
     auto sixrd_net_r0(const Eigen::MatrixBase<DerivedA> &xmat, const Eigen::SparseMatrixBase<DerivedB> &adj,
-                 const Eigen::MatrixBase<DerivedC> &param) -> double {
+                      const Eigen::MatrixBase<DerivedC> &param) -> double {
 
         /*
          * Find the reproduction number for the network SIXRD model
@@ -194,14 +190,14 @@ namespace EpiGraph {
 
 /*
 template<typename DerivedA>
-auto SIXRD_R0(Eigen::MatrixBase<DerivedA> &xmat, const SIXRDParam param) -> double {
+auto SIXRD_R0(EigenUtil::MatrixBase<DerivedA> &xmat, const SIXRDParam param) -> double {
 
      * Find the reproduction number for the SIXRD model
 
 
     static_assert(1 == DerivedA::ColsAtCompileTime, "Input matrix must have 1 cols (must be a vector)");
 
-    using Mat = Eigen::Matrix2d;
+    using Mat = EigenUtil::Matrix2d;
 
     double alpha = param.alpha;
     double beta = param.beta;
@@ -221,9 +217,9 @@ auto SIXRD_R0(Eigen::MatrixBase<DerivedA> &xmat, const SIXRDParam param) -> doub
 
     Mat prod = -T * E_inv;
 
-    Eigen::EigenSolver<Mat> eigensolver;
+    EigenUtil::EigenSolver<Mat> eigensolver;
     eigensolver.compute(prod);
-    Eigen::VectorXd eigen_values = eigensolver.eigenvalues().cwiseAbs();
+    EigenUtil::VectorXd eigen_values = eigensolver.eigenvalues().cwiseAbs();
 
     return eigen_values.maxCoeff();
 };
