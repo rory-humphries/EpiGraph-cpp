@@ -10,43 +10,50 @@
 
 namespace EpiGraph {
 
-    template<typename StateMat, typename ParamType, typename CoupType>
-    class SIXRDNetMetaPop : public NetMetaPop<StateMat, ParamType, CoupType> {
-    public:
-        using Base = NetMetaPop<StateMat, ParamType, CoupType>;
-        using state_type = typename Base::state_type;
-        using param_type = typename Base::param_type;
-        using coupling_type = typename Base::coupling_type;
+	template<typename StateMat, typename ParamType, typename CoupType>
+	class SIXRDNetMetaPop : public NetMetaPop<StateMat, ParamType, CoupType> {
+	public:
+		using Base = NetMetaPop<StateMat, ParamType, CoupType>;
+		using state_type = typename Base::state_type;
+		using param_type = typename Base::param_type;
+		using coupling_type = typename Base::coupling_type;
 
-        explicit SIXRDNetMetaPop(Eigen::Index dim) : NetMetaPop<StateMat, ParamType, CoupType>(dim, 5, 5) {}
+		explicit SIXRDNetMetaPop(Eigen::Index dim) : NetMetaPop<StateMat, ParamType, CoupType>(dim,
+																							   5,
+																							   5) {
+		}
 
-    private:
-        using Base::m_state;
-        using Base::m_params;
-        using Base::m_coupling;
-    };
+	private:
+		using Base::m_state;
+		using Base::m_params;
+		using Base::m_coupling;
+	};
 
-    template<typename StateMat, typename ParamType, typename CoupType, typename std::enable_if<ParamType::IsVectorAtCompileTime == 1>::type * = nullptr>
-    auto dXdt(const SIXRDNetMetaPop<StateMat, ParamType, CoupType>& model) -> StateMat {
-        return sixrd_net_ode_uni_params(model.state(), model.coupling(), model.params());
-    }
+	template<typename StateMat, typename ParamType, typename CoupType, typename std::enable_if<
+			ParamType::IsVectorAtCompileTime == 1>::type * = nullptr>
+	auto dXdt(const SIXRDNetMetaPop<StateMat, ParamType, CoupType> &model) -> StateMat {
+		return sixrd_net_ode_uni_params(model.state(), model.coupling(), model.params());
+	}
 
-    template<typename StateMat, typename ParamType, typename CoupType, typename std::enable_if<ParamType::IsVectorAtCompileTime != 1>::type * = nullptr>
-    auto dXdt(const SIXRDNetMetaPop<StateMat, ParamType, CoupType>& model) -> StateMat {
-        return sixrd_net_ode(model.state(), model.coupling(), model.params());
-    }
+	template<typename StateMat, typename ParamType, typename CoupType, typename std::enable_if<
+			ParamType::IsVectorAtCompileTime != 1>::type * = nullptr>
+	auto dXdt(const SIXRDNetMetaPop<StateMat, ParamType, CoupType> &model) -> StateMat {
+		return sixrd_net_ode(model.state(), model.coupling(), model.params());
+	}
 
-    // only defined for uniform parameters
-    template<typename StateMat, typename ParamType, typename CoupType, typename std::enable_if<ParamType::IsVectorAtCompileTime == 1>::type * = nullptr>
-    auto next_gen_matrix(const SIXRDNetMetaPop<StateMat, ParamType, CoupType>& model) -> CoupType {
-        return sixrd_next_gen_matrix(model.state(), model.coupling(), model.params());
-    }
+	// only defined for uniform parameters
+	template<typename StateMat, typename ParamType, typename CoupType, typename std::enable_if<
+			ParamType::IsVectorAtCompileTime == 1>::type * = nullptr>
+	auto next_gen_matrix(const SIXRDNetMetaPop<StateMat, ParamType, CoupType> &model) -> CoupType {
+		return sixrd_next_gen_matrix(model.state(), model.coupling(), model.params());
+	}
 
-    // only defined for uniform parameters
-    template<typename StateMat, typename ParamType, typename CoupType, typename std::enable_if<ParamType::IsVectorAtCompileTime == 1>::type * = nullptr>
-    auto r0(const SIXRDNetMetaPop<StateMat, ParamType, CoupType>& model) -> double {
-        return sixrd_net_r0(model.state(), model.coupling(), model.params().transpose());
-    }
+	// only defined for uniform parameters
+	template<typename StateMat, typename ParamType, typename CoupType, typename std::enable_if<
+			ParamType::IsVectorAtCompileTime == 1>::type * = nullptr>
+	auto r0(const SIXRDNetMetaPop<StateMat, ParamType, CoupType> &model) -> double {
+		return sixrd_net_r0(model.state(), model.coupling(), model.params().transpose());
+	}
 
 }
 

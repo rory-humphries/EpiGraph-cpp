@@ -132,7 +132,7 @@ int main(int argc, char *argv[]) {
                 x.set_state(x.state() + dXdt(x));
 
                 // Output to file
-                write_state(x, full_output_path+std::to_string(t)+".csv", "S,I,X,R,D,N");
+				write_state(x, full_output_path + std::to_string(t) + ".csv", "S,I,X,R,D,N");
 
                 //double R0 = r0(x);
 

@@ -6,7 +6,7 @@
 #define EPIGRAPH_CPP_UTIL_HPP
 
 namespace EpiGraph {
-    template<typename Derived>
-    struct traits;
+	template<typename Derived>
+	struct traits;
 }
 #endif //EPIGRAPH_CPP_UTIL_HPP
