@@ -1,0 +1,291 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Jun 17 21:05:36 2020
+
+@author: roryh
+"""
+
+import pandas as pd
+import geopandas as gpd
+import numpy as np
+
+"""
+This script outputs all the data needed to run network models on the combined
+ROI electoral division data and the NI super output area data.
+"""
+
+############################
+# ni counties
+print("Reading Northern Ireland Counties...", end="", flush = True)
+# holds shapefile for northern ireland counties
+ni_counties =  gpd.read_file('../data/raw/Shapefiles/northern_ireland_counties')
+
+# drop uneeded cols
+ni_counties = ni_counties.drop(['COUNTY_ID', 'Area_SqKM', 'OBJECTID'], axis = 'columns')
+
+ni_counties.columns = ['county', 'geometry']
+print("Done", end="\n", flush = True)
+############################
+# roi counties
+print("Reading Republic of Ireland Counties...", end="", flush = True)
+
+roi_counties = gpd.read_file('../data/raw/Shapefiles/roi_counties')
+
+# drop uneeded cols
+roi_counties = roi_counties.drop(['ENGLISH', 'GAEILGE', 'CONTAE', 'PROVINCE', 'GUID',
+       'CENTROID_X', 'CENTROID_Y', 'AREA', 'CC_ID', 'OBJECTID', 'Shape__Are',
+       'Shape__Len'], axis = 'columns')
+
+roi_counties.columns = [x.lower() for x in roi_counties.columns]
+
+# combine cork city and council polygons
+roi_counties.geometry[1] = roi_counties.geometry[24].union(roi_counties.geometry[1])
+roi_counties = roi_counties.drop(24)
+
+# combine dublin city, south dublin, fingal and dun laoghaire polygons
+roi_counties.geometry[0] = roi_counties.geometry[0].union(roi_counties.geometry[9])
+roi_counties.geometry[0] = roi_counties.geometry[0].union(roi_counties.geometry[21])
+roi_counties.geometry[0] = roi_counties.geometry[0].union(roi_counties.geometry[10])
+
+roi_counties = roi_counties.drop([9, 10, 21])
+
+# combine galway city and council polygons
+roi_counties.geometry[2] = roi_counties.geometry[2].union(roi_counties.geometry[22])
+roi_counties = roi_counties.drop(22)
+
+roi_counties.reset_index(drop=True, inplace = True)
+print("Done", end="\n", flush = True)
+############################
+# ire counties
+print("Joining data sets...", end="", flush = True)
+
+ire_counties = pd.concat([ni_counties, roi_counties])
+ire_counties.reset_index(drop=True, inplace = True)
+
+print("Done", end="\n", flush = True)
+
+############################
+# ni super outpur areas
+print("Reading NI super output areas...", end="", flush = True)
+
+# holds shapefile for northern irish super output areas
+ni_soa = gpd.read_file('../data/raw/Shapefiles/super_output_areas')
+ni_soa = ni_soa.to_crs(ni_counties.crs)
+ni_soa.columns = ['id', 'name', 'geometry']
+print("Done", end="\n", flush = True)
+
+############################
+# roi electoral divisions
+print("Reading ROI electoral divisions...", end="", flush = True)
+
+# holds shapefile for roi electoral divisions
+roi_ed = gpd.read_file('../data/raw/Shapefiles/electoral_divisions')
+roi_ed = roi_ed.to_crs(ni_counties.crs)
+roi_ed = roi_ed.drop(['NUTS1', 'NUTS1NAME', 'NUTS2', 'NUTS2NAME', 'NUTS3', 'NUTS3NAME',
+       'COUNTY', 'COUNTYNAME', 'CSOED', 'LAND_AREA',
+       'TOTAL_AREA'], axis = 'columns')
+roi_ed.columns = ['id', 'name', 'geometry']
+
+# find which osied's (id) are combined in the shapefile
+ind = []; ids = []
+for i, x in enumerate(roi_ed.id):
+    xsplit = x.split('/')
+    if len(xsplit) <= 1:
+        ind.append(i)
+        ids.append(str(int(xsplit[0])))
+    else:
+        for j in xsplit:
+            ind.append(i)
+            ids.append(str(int(j)))
+        
+roi_ed = roi_ed.loc[ind]
+roi_ed.id = ids
+roi_ed.reset_index(drop=True, inplace = True)
+print("Done", end="\n", flush = True)
+
+############################
+# combined roi electoral divisions and ni electoral divisions
+
+print("Joining data sets...", end="", flush = True)
+
+ire_ed_soa = pd.concat([ni_soa, roi_ed])
+ire_ed_soa.reset_index(drop=True, inplace = True)
+
+# find the counties each ed/soa belongs to
+ire_ed_soa['county'] = ''
+
+for county, geom in zip(ire_counties.county, ire_counties.simplify(0.01).geometry):
+    unknown = ire_ed_soa.county==''
+    
+    pnt_in_geo = ire_ed_soa.loc[unknown].intersects(geom)
+    ire_ed_soa.loc[ire_ed_soa[unknown].index[pnt_in_geo], 'county'] = county
+print("Done", end="\n", flush = True)
+  
+############################
+# add populations to combined roi electoral divisions and ni electoral divisions
+
+# hold info on every Electoral Division (ed) and super output area (soa)
+ed_soa_pop = pd.read_csv('../data/raw/Joined_Pop_Data_CSO_NISRA.csv', 
+                        usecols = ['Electoral Division', 'Population'])
+
+# cleanup ed_soa_df and make ed/soa id's the df index
+ed_soa_name_split = ed_soa_pop['Electoral Division'].str.split(expand=True)
+ed_soa_pop['id'] = ed_soa_name_split[0]
+ed_soa_pop = ed_soa_pop.drop(['Electoral Division'], axis = 'columns')
+ed_soa_pop.columns = [x.lower() for x in ed_soa_pop.columns]
+
+
+ire_ed_soa['population'] = 0
+ire_ed_soa.index = ire_ed_soa.id
+
+ire_ed_soa.loc[ed_soa_pop.id, 'population'] = ed_soa_pop.population.to_numpy()
+ire_ed_soa.reset_index(drop=True, inplace = True)
+
+############################
+# add lat, long of soa/ed centroids
+
+#Convert to a prjected crs beofre computing centrid, eg mercator
+ire_ed_soa_centroid = ire_ed_soa.to_crs("EPSG:3395").centroid
+ire_ed_soa_centroid = ire_ed_soa_centroid.to_crs(ire_ed_soa.crs)
+ire_ed_soa['lat'] = [p.x for p in ire_ed_soa_centroid]
+ire_ed_soa['long'] = [p.y for p in ire_ed_soa_centroid]
+ 
+############################
+# output dataframes to file
+print("Writing data to file...", end="", flush = True)
+
+ire_ed_soa.to_csv('../data/processed/ed_soa_data_frame.csv', index=False)
+
+ire_ed_soa[["long", "lat"]].to_csv('../data/processed/ed_soa_long_lat.csv', index=False)
+ire_ed_soa[["population"]].to_csv('../data/processed/ed_soa_population.csv', index=False)
+ire_ed_soa[["county"]].to_csv('../data/processed/ed_soa_county.csv', index=False)
+print("Done", end="\n", flush = True)
+
+############################
+# aggreagte ire_ed_soa by county
+print("Computing travel probabilites from ED data...", end="", flush = True)
+
+
+"""
+Output the probability distribution of travel distances from the ed edges
+"""
+
+# read in electoral division data and commuting data
+ed_df = pd.read_csv('../data/raw/ED_Basic_Info.csv')
+ed_names = ed_df['Electoral Division'].to_numpy()
+
+# maps each ed to it's index in ed_basic_info
+ed_id_map = {ed:x for ed, x in zip(ed_df['Electoral Division'], ed_df.index)}
+
+# has the number of commuter between each ed
+ed_links = pd.read_csv('../data/raw/ED_Used_Link_Info.csv')
+
+# will hold the probability of a commuter travelling a certain (rounded to int) distance
+ed_dist = dict()
+for i,j,k in zip(ed_links['Electoral Division'].to_numpy(), ed_links.Distance.to_numpy(), ed_links['No. of Commuters'].to_numpy()):
+    if int(j) not in ed_dist.keys():
+        ed_dist[int(j)] = int(k)
+    else:
+        ed_dist[int(j)] += int(k)  
+tot = sum(ed_dist.values())
+for j in ed_dist.keys():
+    ed_dist[j]/=tot
+
+# insert the data into a dataframe and write to file
+dist = list()
+probs = list()
+
+for i,j in ed_dist.items():
+    dist.append(i)
+    probs.append(j)
+    
+distance_distribution = pd.DataFrame({'value':dist, 'probability':probs})
+
+distance_distribution.to_csv('../data/processed/ed_distance_probs.csv', index = False)
+
+"""
+Output the probability distribution of commuter proportions
+"""
+bins = np.linspace(0,1,50)
+bin_indices = np.digitize(ed_df['No. of Commuters'].to_numpy()/ed_df.Population.to_numpy(), bins)
+bin_count = np.bincount(bin_indices)
+probs = bin_count/np.sum(bin_count)
+
+commuter_distribution = pd.DataFrame({'value':bins[:len(probs)], 'probability':probs})
+commuter_distribution.to_csv('../data/processed/ed_commuter_probs.csv', index = False)
+
+
+"""
+Output the matrix which gives the probaility of a vertex travelling to another based 
+on the dostribution of travel distances from electoral divisions
+"""
+
+bands = pd.read_csv("../data/raw/Distance_Distribution_by_Ratio.csv")
+
+bands_dic = {x.split('-')[-1].strip():np.zeros(700) for x in bands["Ratio Band"]}
+bands_dic = {x.split('-')[-1].strip():np.zeros(700) for x in bands["Ratio Band"]}
+
+for b, d, p in zip(bands["Ratio Band"], bands["Distance"], bands["Prob"]):
+    bands_dic[b.split('-')[-1].strip()][int(d)] = p
+    
+for k in bands_dic.keys():
+    prev = 0
+    for i, val in enumerate(bands_dic[k]):
+        if val == 0:
+            bands_dic[k][i] = prev
+        else:
+            prev = val
+
+ratios = np.array([0.1, 1, 3800])
+ratios_str = np.array(['0.1', '1', '3800'])
+pop_list = ire_ed_soa.population.to_numpy()
+vertex_travel_mat = np.zeros((len(ire_ed_soa.index), len(ire_ed_soa.index)))
+
+lat_list = ire_ed_soa.lat.to_numpy()
+long_list = ire_ed_soa.long.to_numpy()
+
+def radians(x):
+    return x*np.pi/180.0
+
+def distance_haversine(lat1, lon1, lat2, lon2):
+    # approximate radius of earth in km
+    R = 6373.0 * 1000
+
+    lat1 = radians(lat1)
+    lon1 = radians(lon1)
+    lat2 = radians(lat2)
+    lon2 = radians(lon2)
+
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
+
+    a = np.sin(dlat / 2) ** 2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2) ** 2
+    c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
+
+    distance = R * c
+
+    return distance
+
+for src in range(len(ire_ed_soa.index)):
+    for dst in range(len(ire_ed_soa.index)):
+        if src == dst or pop_list[dst] == 0:
+            continue
+        else:
+            ratio = pop_list[src]/pop_list[dst]
+            idx = np.searchsorted(ratios, ratio, 'left')
+            ratio = ratios_str[idx]
+    
+            d = int(distance_haversine(lat_list[src], long_list[src], 
+                                       lat_list[dst], long_list[dst])/1000.0)
+            
+            
+            vertex_travel_mat[src][dst] = bands_dic[ratio][d]
+print("Done", end="\n", flush = True)
+
+print("Writing data to file...", end="", flush = True)
+
+np.savetxt('../data/processed/ed_soa_travel_prob_mat_ratio_bands.csv', vertex_travel_mat, delimiter=',', fmt = '%f')
+
+print("Done", end = "\n", flush = True)
+

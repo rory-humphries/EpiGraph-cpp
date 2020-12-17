@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.13)
 project(EpiGraph-cpp)
 #set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_CXX_STANDARD 20)
+set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
 
 # Configure library
 file(GLOB_RECURSE epigraph_src "EpiGraph/*.hpp" "EpiGraph/*.cpp")

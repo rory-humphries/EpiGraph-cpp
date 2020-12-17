@@ -21,14 +21,14 @@ from shapely import wkt
 ######################
 save_figs = True
 
-data_path = '../output/'
+data_path = '../scenarios/max_1400/'
 
-output_name = 'max_I_1380_comp_50'
+output_name = 'county_lockdown_1400_I'
 fig_name = output_name + '.png'
 data_name = output_name + '.csv'
-title = '50% Compliance'
+title = 'County Level Lockdown'
 
-max_time = 500
+max_time = 599
 #####################
 
 
@@ -52,7 +52,7 @@ months = mdates.MonthLocator()  # every month
 years_fmt = mdates.DateFormatter('%Y')
 months_fmt = mdates.DateFormatter('%m')
 
-fig, ax = plt.subplots(1, 1, figsize=(16, 9))
+fig, ax = plt.subplots(1, 1, figsize = (16/2.5, 9/2.5))
 
 data = []
 for county in counties:
@@ -70,7 +70,7 @@ for county in counties:
     maxd = 0;
     maxx = 0
     for filename in range(0, max_time):
-        df = pd.read_csv("../output/" + str(filename) + ".csv")
+        df = pd.read_csv(data_path + str(filename) + ".csv")
         # s.append(sum(df.S))
         i.append(sum(df.loc[ed_soa_gdf.county == county, 'I']))
         # r.append(sum(df.R))
@@ -85,11 +85,23 @@ for county in counties:
 
     # fig, ax = plt.subplots(1, 1, figsize = (16/3, 9/3))
     # plt.plot(dates, s, label = 'S', c = 'tab:purple')
-    plt.plot(dates, i, 'r-', alpha=0.5, label=county)
+    if county == "DUBLIN":
+        plt.plot(dates, i, '-', c = 'tab:blue', label=county)
+    elif county == "CORK":
+        plt.plot(dates, i, '-', c = 'tab:green', label=county)
+    elif county == "ANTRIM":
+        plt.plot(dates, i, '-', c = 'tab:orange', label=county)
+    elif county == "DOWN":
+        plt.plot(dates, i, '-', c = 'darkorchid', label=county)
+    else:
+        plt.plot(dates, i, 'r-', alpha=0.2)
     # plt.plot(dates, r, label = 'R', c = 'tab:orange')
     # plt.plot(dates, d, label = 'D', c = 'tab:red')
     # plt.plot(dates, x, label = 'X', c = 'tab:green')
     data.append(i)
+
+
+plt.hlines(1400, dates[0], dates[-1], color='k', linestyle = '--')
 
 event_durations = [50, 15, 52, 21, 21, 21, 21, 21, 400]
 event_dates = [start_date]
@@ -113,13 +125,13 @@ ax.xaxis.set_minor_formatter(months_fmt)
 ax.tick_params(which='major', length=16)
 plt.setp(ax.xaxis.get_minorticklabels(), rotation=45)
 
-plt.title(title)
+#plt.title(title)
 plt.xlabel('Time [months]')
 plt.ylabel('No. of individuals')
 
 # plt.yscale('log')
 # plt.ylim(1,10000)
-# plt.legend()
+plt.legend(loc=1)
 
 if save_figs == True:
     plt.savefig(fig_name, bbox_inches='tight', dpi=300)

@@ -6,14 +6,9 @@ Created on Wed Jun 17 21:05:36 2020
 @author: roryh
 """
 
-import csv
 import pandas as pd
-import datetime
-import numpy as np
-import matplotlib.pyplot as plt
 import geopandas as gpd
-
-from pyproj import Proj, transform
+import numpy as np
 
 """
 This script outputs all the data needed to run network models on the combined
@@ -22,7 +17,7 @@ ROI electoral division data and the NI super output area data.
 
 ############################
 # ni counties
-
+print("Processing Northern Ireland Counties...", end="", flush = True)
 # holds shapefile for northern ireland counties
 ni_counties =  gpd.read_file('../data/raw/Shapefiles/northern_ireland_counties')
 
@@ -30,9 +25,11 @@ ni_counties =  gpd.read_file('../data/raw/Shapefiles/northern_ireland_counties')
 ni_counties = ni_counties.drop(['COUNTY_ID', 'Area_SqKM', 'OBJECTID'], axis = 'columns')
 
 ni_counties.columns = ['county', 'geometry']
-
+print("Done", end="\n", flush = True)
 ############################
 # roi counties
+print("Processing Republic of Ireland Counties...", end="", flush = True)
+
 roi_counties = gpd.read_file('../data/raw/Shapefiles/roi_counties')
 
 # drop uneeded cols
@@ -58,24 +55,29 @@ roi_counties.geometry[2] = roi_counties.geometry[2].union(roi_counties.geometry[
 roi_counties = roi_counties.drop(22)
 
 roi_counties.reset_index(drop=True, inplace = True)
-
+print("Done", end="\n", flush = True)
 ############################
 # ire counties
+print("Joining data sets...", end="", flush = True)
+
 ire_counties = pd.concat([ni_counties, roi_counties])
 ire_counties.reset_index(drop=True, inplace = True)
 
+print("Done", end="\n", flush = True)
 
 ############################
 # ni super outpur areas
+print("Processing NI super output areas...", end="", flush = True)
 
 # holds shapefile for northern irish super output areas
 ni_soa = gpd.read_file('../data/raw/Shapefiles/super_output_areas')
 ni_soa = ni_soa.to_crs(ni_counties.crs)
 ni_soa.columns = ['id', 'name', 'geometry']
-
+print("Done", end="\n", flush = True)
 
 ############################
 # roi electoral divisions
+print("Processing ROI electoral divisions...", end="", flush = True)
 
 # holds shapefile for roi electoral divisions
 roi_ed = gpd.read_file('../data/raw/Shapefiles/electoral_divisions')
@@ -100,9 +102,13 @@ for i, x in enumerate(roi_ed.id):
 roi_ed = roi_ed.loc[ind]
 roi_ed.id = ids
 roi_ed.reset_index(drop=True, inplace = True)
+print("Done", end="\n", flush = True)
 
 ############################
 # combined roi electoral divisions and ni electoral divisions
+
+print("Joining data sets...", end="", flush = True)
+
 ire_ed_soa = pd.concat([ni_soa, roi_ed])
 ire_ed_soa.reset_index(drop=True, inplace = True)
 
@@ -111,11 +117,11 @@ ire_ed_soa['county'] = ''
 
 for county, geom in zip(ire_counties.county, ire_counties.simplify(0.01).geometry):
     unknown = ire_ed_soa.county==''
-    print(county, sum(unknown))
     
     pnt_in_geo = ire_ed_soa.loc[unknown].intersects(geom)
     ire_ed_soa.loc[ire_ed_soa[unknown].index[pnt_in_geo], 'county'] = county
-   
+print("Done", end="\n", flush = True)
+  
 ############################
 # add populations to combined roi electoral divisions and ni electoral divisions
 
@@ -126,35 +132,40 @@ ed_soa_pop = pd.read_csv('../data/raw/Joined_Pop_Data_CSO_NISRA.csv',
 # cleanup ed_soa_df and make ed/soa id's the df index
 ed_soa_name_split = ed_soa_pop['Electoral Division'].str.split(expand=True)
 ed_soa_pop['id'] = ed_soa_name_split[0]
-ed_soa_pop.columns = [x.lower() for x in ed_soa_pop.columns]
 ed_soa_pop = ed_soa_pop.drop(['Electoral Division'], axis = 'columns')
+ed_soa_pop.columns = [x.lower() for x in ed_soa_pop.columns]
 
 
 ire_ed_soa['population'] = 0
 ire_ed_soa.index = ire_ed_soa.id
 
-ire_ed_soa.loc[ed_soa_pop.id, 'population'] = ed_soa_pop.population
+ire_ed_soa.loc[ed_soa_pop.id, 'population'] = ed_soa_pop.population.to_numpy()
 ire_ed_soa.reset_index(drop=True, inplace = True)
 
 ############################
 # add lat, long of soa/ed centroids
 
-ire_ed_soa_centroid = ire_ed_soa.centroid
+#Convert to a prjected crs beofre computing centrid, eg mercator
+ire_ed_soa_centroid = ire_ed_soa.to_crs("EPSG:3395").centroid
+ire_ed_soa_centroid = ire_ed_soa_centroid.to_crs(ire_ed_soa.crs)
 ire_ed_soa['lat'] = [p.x for p in ire_ed_soa_centroid]
 ire_ed_soa['long'] = [p.y for p in ire_ed_soa_centroid]
  
 ############################
 # output dataframes to file
+print("Writing data to file...", end="", flush = True)
 
 ire_ed_soa.to_csv('../data/processed/ed_soa_data_frame.csv', index=False)
 
 ire_ed_soa[["long", "lat"]].to_csv('../data/processed/ed_soa_long_lat.csv', index=False)
 ire_ed_soa[["population"]].to_csv('../data/processed/ed_soa_population.csv', index=False)
 ire_ed_soa[["county"]].to_csv('../data/processed/ed_soa_county.csv', index=False)
+print("Done", end="\n", flush = True)
 
 ############################
 # aggreagte ire_ed_soa by county
-ire_ed_soa
+print("Computing travel probabilites from ED data...", end="", flush = True)
+
 
 """
 Output the probability distribution of travel distances from the ed edges
@@ -257,7 +268,6 @@ def distance_haversine(lat1, lon1, lat2, lon2):
     return distance
 
 for src in range(len(ire_ed_soa.index)):
-    print(src)
     for dst in range(len(ire_ed_soa.index)):
         if src == dst or pop_list[dst] == 0:
             continue
@@ -271,35 +281,11 @@ for src in range(len(ire_ed_soa.index)):
             
             
             vertex_travel_mat[src][dst] = bands_dic[ratio][d]
+print("Done", end="\n", flush = True)
+
+print("Writing data to file...", end="", flush = True)
 
 np.savetxt('../data/processed/ed_soa_travel_prob_mat_ratio_bands.csv', vertex_travel_mat, delimiter=',', fmt = '%f')
 
+print("Done", end = "\n", flush = True)
 
-
-"""
-dist_probs_map = {x:y for x,y in zip(distance_distribution.distance, distance_distribution.probability)}
-for u in range(500):
-    if u not in dist_probs_map.keys():
-        dist_probs_map[u]=0
-        
-vertex_travel_mat = np.zeros((len(vertices_df.index), len(vertices_df.index)))
-
-for src in vertices_df.index:
-    #print(src)
-    tot = 0
-    for dst in vertices_df.index:
-        if src == dst:
-            continue
-        else:
-            tot += dist_probs_map[int(distance_haversine(lat_list[src], 
-                                                             long_list[src], 
-                                                             lat_list[dst], 
-                                                             long_list[dst])/1000.0)]
-            vertex_travel_mat[src][dst] = tot
-            
-for x in vertices_df.index:
-    vertex_travel_mat[x] /= np.sum(vertex_travel_mat[x])
-                                   
-np.savetxt('../data/processed/ed_soa_travel_prob_mat.csv', vertex_travel_mat, delimiter=',', fmt = '%f')
-            
-"""

@@ -6,6 +6,8 @@
 #ifndef EPIGRAPH_SIRX_NETWORK_H
 #define EPIGRAPH_SIRX_NETWORK_H
 
+#include<EpiGraph/EigenUtil/Spectral.hpp>
+
 #include <Eigen/Dense>
 
 #include <map>
@@ -154,40 +156,45 @@ namespace EpiGraph {
 				std::cout << "here" << std::endl;
 		}
 		Eigen::VectorXd n_inv = n.cwiseInverse();
-
-		DerivedB S = (xmat.col(SixrdId::S).cwiseProduct(n_inv)).asDiagonal() * adj_d;
-
+	
 		Eigen::VectorXd one_vec = Eigen::VectorXd::Ones(dim);
 		Eigen::RowVectorXd one_rowvec = Eigen::RowVectorXd::Ones(dim);
 
+		Eigen::Matrix<double, Eigen::Dynamic, 1> S = xmat.col(SixrdId::S);
+		Eigen::VectorXd Nprop = (adj_d*one_vec).array()/n.array();
+		
 		Eigen::VectorXd n_diff = n + (one_rowvec * adj_d).transpose() - (adj_d * one_vec);
 		Eigen::VectorXd n_diff_inv = n_diff.cwiseInverse();
 
-		Eigen::VectorXd mat1 = xmat.col(SixrdId::S) - S * one_vec;
+		Eigen::VectorXd mat1 = S.array() - S.array()*Nprop.array();
 
-		DerivedB mat2(
-				(one_vec.array() - ((adj_d * one_vec).array() / n.array())).matrix().asDiagonal());
-		mat2 += DerivedB(adj_d.transpose() * (n.cwiseInverse().asDiagonal()));
+		DerivedB mat2((one_vec.array() - ((adj_d * one_vec).array() / n.array())).matrix().asDiagonal());
+		mat2 += DerivedB(((n.cwiseInverse().asDiagonal())*adj_d).transpose());
 		mat2 = n_diff_inv.asDiagonal() * mat2;
 
-		DerivedB mat3 = S * mat2;
-
-		DerivedB T = ((beta * c) / (mu + alpha + kappa)) * (mat1.asDiagonal() * mat2 + mat3);
+		DerivedB mat3 = DerivedB(adj_d * mat2);
+		mat3 = (S.cwiseProduct(n_inv)).asDiagonal()*mat3;
+		//DerivedB T = (mat1.asDiagonal() * mat2) + mat3;
+		DerivedB T = ((beta * c) / (mu + alpha + kappa)) * ((mat1.asDiagonal() * mat2) + mat3);
+		//DerivedB T = beta*c*(mat1.asDiagonal() * mat2 + mat3) - DerivedB(one_vec.asDiagonal()*(mu+alpha+kappa));
 
 		return T;
 	}
 
 	template<typename DerivedA, typename DerivedB, typename DerivedC>
 	auto sixrd_net_r0(const Eigen::MatrixBase<DerivedA> &xmat,
-					  const Eigen::SparseMatrixBase<DerivedB> &adj,
+					  const Eigen::EigenBase<DerivedB> &adj,
 					  const Eigen::MatrixBase<DerivedC> &param) -> double {
 
 		/*
 		 * Find the reproduction number for the network SIXRD model
 		 */
 
-
-		DerivedB T = sixrd_next_gen_matrix(xmat, adj, param);
+		
+		DerivedB T = sixrd_next_gen_matrix(xmat, adj.derived(), param);
+		//std::cout<<"DET = " << (Eigen::MatrixXd::Identity(T.rows(), T.cols())-T).determinant()<<std::endl;
+		//std::cout<<"DET = " << (T).determinant()<<std::endl;
+		//std::cout << "trace = " << T.trace() << std::endl;
 		return SpectralRadius(T);
 	}
 

@@ -10,25 +10,20 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-import matplotlib.cbook as cbook
 
 import datetime
-
-
 import os
-import geopandas as gpd
-from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
 
 ######################
 save_figs = True
 
-data_path = '../output/'
+data_path = '../scenarios/12_mar_01_dec_hist_proj_after/'
 
-output_name = '5_phase_and_6_week_lockdown'
+output_name = '12_mar_01_dec_hist_proj_after'
 fig_name = output_name + '.png'
 data_name = output_name + '.csv'
-title = '5 phase and 6 week lockdown'
-max_time = 500
+title = 'Historic Lockdown Scenario with 3rd Lockdown Projection'
+max_time = 600
 #####################
 
 
@@ -46,7 +41,7 @@ s=[];i=[];r=[];d=[];x=[]
 
 maxs = 0;maxi = 0;maxr = 0;maxd = 0;maxx = 0
 for filename in range(0, max_time):
-    df = pd.read_csv("../output/"+str(filename)+".csv")
+    df = pd.read_csv(data_path+str(filename)+".csv")
     s.append(sum(df.S))
     i.append(sum(df.I))
     r.append(sum(df.R))
@@ -69,7 +64,7 @@ start_date = datetime.datetime(2020, 1,22)#+ datetime.timedelta(days=25)
 dates = [start_date + datetime.timedelta(days=k) for k in range(max_time)]
 
 #ax = plt.subplots(1, 1, figsize = (16/3, 9/3))
-fig, ax = plt.subplots(1, 1)
+fig, ax = plt.subplots(1, 1, figsize = (16/2.5, 9/2.5))
 plt.plot(dates, s, label = 'S', c = 'tab:purple')
 plt.plot(dates, np.array(i), label = 'I', c = 'tab:blue')
 plt.plot(dates, r, label = 'R', c = 'tab:orange')
@@ -83,7 +78,7 @@ plt.plot(dates, x, label = 'X', c = 'tab:green')
 #plt.plot(hist_data.date, hist_data.new_cases)
 
 
-event_durations = [49, 15, 52, 21, 21, 21, 21, 21, 45, 42, 400]
+event_durations = [49, 15, 52, 21, 21, 21, 21, 21, 45, 47, 45, 47, 400]
 
 event_dates = [start_date]
 for k in event_durations:
@@ -95,6 +90,8 @@ num_shade_colors = len(shade_event_dates)
 colors = plt.cm.viridis(np.linspace(0,1,num_shade_colors))
 
 for k in range(len(shade_event_dates)-1):
+    if k in [7, 9]:
+        continue
     d1 = shade_event_dates[k]
     d2 = shade_event_dates[k+1]
     plt.axvspan(d1, d2, color = colors[k], alpha=0.2)
@@ -107,13 +104,13 @@ ax.tick_params(which='major', length=16)
 plt.setp(ax.xaxis.get_minorticklabels(), rotation=45)
 #plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
 
-plt.title(title)
+#plt.title(title)
 plt.xlabel('Time [months]')
 plt.ylabel('No. of individuals')
 
 plt.ylim(1, maxs + 1000000)
 plt.yscale('log')
-plt.legend()
+plt.legend(loc=4)
 
 if save_figs == True:
     plt.savefig(fig_name, bbox_inches='tight', dpi = 300)

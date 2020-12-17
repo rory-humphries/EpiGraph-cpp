@@ -68,9 +68,11 @@ int main(int argc, char *argv[]) {
         auto pop = read_matrix<VectorXd>(node_population_path, true);
         int num_nodes = pop.rows();
 
-        // holds the SIXRD state_impl of each node
+		Matrix<bool, Dynamic, 1> non_zero_pops = (pop.array() > 0);
+       
+	   	// holds the SIXRD state_impl of each node
         Model x(num_nodes);
-        x.set_state(SixrdId::S, (pop.array() > 0).select(pop.array(), 1));
+        x.set_state(SixrdId::S, (pop.array() > 50).select(pop.array(), 50));
 
         // Add initial infections
         auto rand_verts = toml::find<std::vector<int>>(config, "parameters", "initial_seed");
@@ -92,13 +94,22 @@ int main(int argc, char *argv[]) {
         // probability distribution for generating commuter numbers
         ProbDist commuter_dist = ProbDist_from_csv(commuter_distribution_path);
 
+		MatrixXd state_history(std::accumulate(duration_list.begin(),
+								duration_list.end(), 1), 6);
+
+        VectorXd rowvec = x.state().colwise().sum();
+		state_history(0, 0) = rowvec[0];
+		state_history(0, 1) = rowvec[1];	
+		state_history(0, 2) = rowvec[2];	
+		state_history(0, 3) = rowvec[3];	
+		state_history(0, 4) = rowvec[4];
+		state_history(0, 5) = 0;	
         // Write initial conditions
         write_state(x, full_output_path+"0.csv", "S,I,X,R,D,N");
-        //write_state_totals(x, agg_output_path, false);
 
         std::cout << "\nRunning simulation...";
         double run_time = 0;
-        int t = 0;
+        int t = 1;
         for (int current_phase = 0; current_phase < phase_order.size(); current_phase++) {
 
             x.set_params(SixrdParamId::beta, beta_list[current_phase]);
@@ -127,27 +138,61 @@ int main(int argc, char *argv[]) {
                 // Generate movements and store in adj matrix
                 //EigenUtil::SparseMatrix<double> adj(num_nodes, num_nodes);
                 x.set_coupling(rnd_travel.distribute_vec_over_matrix_rows(travel_pop));
-
                 // Update the state_impl matrix
                 x.set_state(x.state() + dXdt(x));
 
+				if (t == 1 || t == 60 || t == 125) {
+
+					std::ofstream myfile;
+					myfile.open(std::to_string(t)+ ".txt");
+					for (int col = 0; col < num_nodes; col ++) {
+						for (int row = 0; row < num_nodes; row++) {
+							for (int ll = 0; ll < x.coupling().coeff(row, col); ll++) {
+								double lon1 = pos_mat(row, 0), lon2 = pos_mat(col, 0), lat1 = pos_mat(row, 1), lat2 = pos_mat(col, 1);
+								myfile << long_lat_distance(lon1, lat1, lon2, lat2) << "\n";
+							}
+
+						}
+
+					}
+					myfile.close();
+				}
+				
                 // Output to file
-				write_state(x, full_output_path + std::to_string(t) + ".csv", "S,I,X,R,D,N");
+				 write_state(x, full_output_path + std::to_string(t) + ".csv", "S,I,X,R,D,N");
+				
+				//MatrixXd NGM = next_gen_matrix(x);
+				//MatrixXd new_NGM = MatrixXd::Zero(non_zero_pops.sum(), non_zero_pops.sum());
+				//for (int j = num_nodes; j >= 0; j--) {
+				//	if (!non_zero_pops[j]) {
+				//		unsigned int numRows = NGM.rows();
+    			//		unsigned int numCols = NGM.cols();
 
-                //double R0 = r0(x);
-
+				//		NGM.block(j,0,numRows-1-j,numCols) = NGM.block(j+1,0,numRows-1-j,numCols);
+				//		NGM.block(0,j,numRows,numCols-1-j) = NGM.block(0,j+1,numRows,numCols-1-j);
+				//		NGM.conservativeResize(numRows-1,numCols-1);
+				//	}		
+				//}
+				
+				//double R0 = SpectralRadius(NGM);
                 // Output to console
                 auto comp_vec = x.state().colwise().sum();
+				state_history(t, 0) = comp_vec[0];
+				state_history(t, 1) = comp_vec[1];	
+				state_history(t, 2) = comp_vec[2];	
+				state_history(t, 3) = comp_vec[3];	
+				state_history(t, 4) = comp_vec[4];
+				//state_history(t, 5) = R0;	
                 printf("\n\n\33[2K");
                 std::cout << "Time step : " << t;
-
-                std::cout << "\n\n\33[2KS : " << comp_vec[SixrdId::S];
+                
+				std::cout << "\n\n\33[2KS : " << comp_vec[SixrdId::S];
                 std::cout << "\n\33[2KI : " << comp_vec[SixrdId::I];
                 std::cout << "\n\33[2KX : " << comp_vec[SixrdId::X];
                 std::cout << "\n\33[2KR : " << comp_vec[SixrdId::R];
                 std::cout << "\n\33[2KD : " << comp_vec[SixrdId::D];
 
-                //std::cout << "\n\n\33[2KR0 : " << R0;
+              	//std::cout << "\n\n\33[2KR0 : " << R0;
 
                 std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
                 auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
@@ -156,10 +201,11 @@ int main(int argc, char *argv[]) {
                 std::cout << "\n\n\33[2KTime per loop : " << time_span.count();
                 std::cout << "\n\33[2KTotal run time : " << run_time;
                 printf("\n");
-                printf("\x1b[12A");
+                //printf("\x1b[14A");
+
             }
         }
-
+		write_matrix(state_history, "../agg.csv", "S,I,X,R,D,R0");
         std::cout << "\nFinished!" << std::endl;
 
 }

@@ -52,7 +52,7 @@ namespace EpiGraph {
 	template<typename StateMat, typename ParamType, typename CoupType, typename std::enable_if<
 			ParamType::IsVectorAtCompileTime == 1>::type * = nullptr>
 	auto r0(const SIXRDNetMetaPop<StateMat, ParamType, CoupType> &model) -> double {
-		return sixrd_net_r0(model.state(), model.coupling(), model.params().transpose());
+		return sixrd_net_r0(model.state(), Eigen::MatrixXd(model.coupling()), model.params().transpose());
 	}
 
 }

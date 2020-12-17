@@ -141,6 +141,17 @@ int main(int argc, char *argv[]) {
 																			 cur_compliance.rowwise().replicate(
 																					 travel_weights.cols()).array()));
 	rnd_travel.set_row_distributions(new_travel_weights);
+	
+	MatrixXd state_history(std::accumulate(duration_list.begin(),
+								duration_list.end(), 1), 6);
+
+    VectorXd rowvec = x.state().colwise().sum();
+	state_history(0, 0) = rowvec[0];
+	state_history(0, 1) = rowvec[1];	
+	state_history(0, 2) = rowvec[2];	
+	state_history(0, 3) = rowvec[3];	
+	state_history(0, 4) = rowvec[4];
+	state_history(0, 5) = 0;
 
 	for (int t = 0; t < max_t; t++) {
 
@@ -161,7 +172,6 @@ int main(int argc, char *argv[]) {
 
 		// Output to file
 		write_state(x, full_output_path + std::to_string(t) + ".csv", "S,I,X,R,D,N");
-		//write_state_totals(x, agg_output_path, true);
 
 		county_I = accumulate_groups(x.state().col(SixrdId::I), county);
 
@@ -203,6 +213,12 @@ int main(int argc, char *argv[]) {
 
 		// Output to console
 		auto comp_vec = x.state().colwise().sum();
+		state_history(t, 0) = comp_vec[0];
+		state_history(t, 1) = comp_vec[1];	
+		state_history(t, 2) = comp_vec[2];	
+		state_history(t, 3) = comp_vec[3];	
+		state_history(t, 4) = comp_vec[4];
+
 		printf("\n\n\33[2K");
 		std::cout << "Time step : " << t;
 
@@ -223,6 +239,7 @@ int main(int argc, char *argv[]) {
 
 
 	}
+	write_matrix(state_history, "../agg.csv", "S,I,X,R,D,R0");
 
 	std::cout << "Finished!" << std::endl;
 

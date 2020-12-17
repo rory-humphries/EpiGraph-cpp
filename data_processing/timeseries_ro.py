@@ -9,22 +9,18 @@ Created on Sat Sep 19 21:29:29 2020
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-import matplotlib.cbook as cbook
 
 import datetime
 
 import os
-import geopandas as gpd
-from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
 
 ######################
 save_figs = True
-op_name = '5_phase_r0.png'
+op_name = '5_phase_r0_1.png'
 dir_path = "../output/"
 #####################
 
-R0 = np.loadtxt("../R0.csv", delimiter=',')
+R0 = np.loadtxt("../scenarios/doomsday_r0.csv", delimiter=',')
 
 files = []
 for filename in os.listdir(dir_path):
@@ -73,6 +69,7 @@ l3 = plt.plot(dates, r, label='R', c='tab:orange')
 l4 = plt.plot(dates, d, label='D', c='tab:red')
 # l5=plt.plot(dates, x, label = 'X', c = 'tab:green')
 # plt.plot(dates[0], [0], 'k--', label = r"$R_0$")
+
 
 event_durations = [50, 67, 21, 21, 21, 21, 21, 400]
 event_dates = [start_date]
