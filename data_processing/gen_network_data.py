@@ -9,11 +9,14 @@ Created on Wed Jun 17 21:05:36 2020
 import pandas as pd
 import geopandas as gpd
 import numpy as np
+import os
 
 """
 This script outputs all the data needed to run network models on the combined
 ROI electoral division data and the NI super output area data.
 """
+
+os.mkdir("../data/processed/")
 
 ############################
 # ni counties

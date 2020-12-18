@@ -4,13 +4,14 @@ project(EpiGraph-cpp)
 set(CMAKE_CXX_STANDARD 20)
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
 
+message("CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
+
 # Configure library
 file(GLOB_RECURSE epigraph_src "EpiGraph/*.hpp" "EpiGraph/*.cpp")
 add_library(EpiGraph SHARED ${epigraph_src})
 
 find_package(Eigen3 REQUIRED NO_MODULE)
 target_link_libraries(EpiGraph Eigen3::Eigen)
-#target_precompile_headers(EpiGraph PUBLIC EpiGraph/Core/NetEpiComp.hpp)
 
 find_package(OpenMP)
 if (OpenMP_CXX_FOUND)
