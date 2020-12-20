@@ -22,6 +22,8 @@ target_include_directories(EpiGraph PUBLIC ${CMAKE_CURRENT_LIST_DIR} ${CMAKE_CUR
 
 # configure executables
 add_subdirectory(simulations)
+add_subdirectory(Examples)
+
 
 
 

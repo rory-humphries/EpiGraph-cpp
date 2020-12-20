@@ -20,7 +20,7 @@ auto general_outer_product(const Derived &v, const Derived &u, F f)
                      Derived::RowsAtCompileTime> {
 
   using Scalar = typename Derived::Scalar;
-  int rows = Derived::RowsAtCompileTime;
+  constexpr auto rows = Derived::RowsAtCompileTime;
 
   Eigen::Matrix<Scalar, rows, rows> mat(v.rows(), u.rows());
   for (int j = 0; j < v.rows(); j++) {
