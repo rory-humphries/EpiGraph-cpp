@@ -10,7 +10,7 @@
 namespace EpiGraph {
 
 /**
- * @brief ODE which describes the SIR model.
+ * @brief ODE which describes the SI model. Computes dx/dt in place.
  *
  * @tparam Vec1 A row or column vector which inherits form
  * Eigen::MatrixBase<Vec1>.
@@ -18,17 +18,10 @@ namespace EpiGraph {
  * Eigen::MatrixBase<Vec2>.
  * @tparam Vec3 A row or column vector which inherits form
  * Eigen::MatrixBase<Vec3>.
- * @param x A vector of length 2.
- * x[0] = S.
- * x[1] = I.
- * @param dxdt A vector of length 2.
- * dxdt[0] = dS/dt.
- * dxdt[1] = dI/dt.
- * @param p A vector of length 4.
- * params[0] = probability of infection on contact.
- * params[1] = recovery rate.
- * params[2] = birth rate.
- * params[3] = death rate.
+ * @param x A vector of length 2. x[0] = S. x[1] = I.
+ * @param dxdt A vector of length 2. dxdt[0] = dS/dt. dxdt[1] = dI/dt.
+ * @param p A vector of length 4. p[0] = probability of infection on contact.
+ * p[1] = recovery rate. p[2] = birth rate. p[3] = death rate.
  */
 template <IsVector Vec1, IsVector Vec2, IsVector Vec3>
 auto si_ode(const Vec1 &x, Vec2 &dxdt, const Vec3 &p) -> void {
@@ -50,20 +43,15 @@ auto si_ode(const Vec1 &x, Vec2 &dxdt, const Vec3 &p) -> void {
 }
 
 /**
- * @brief ODE which describes the SIR model.
+ * @brief ODE which describes the SI model.
  *
  * @tparam Vec1 A row or column vector which inherits form
  * Eigen::MatrixBase<Vec1>.
  * @tparam Vec2 A row or column vector which inherits form
  * Eigen::MatrixBase<Vec2>.
- * @param x A vector of length 2.
- * x[0] = S.
- * x[1] = I.
- * @param p A vector of length 4.
- * params[0] = probability of infection on contact.
- * params[1] = recovery rate.
- * params[2] = birth rate.
- * params[3] = death rate.
+ * @param x A vector of length 2. x[0] = S. x[1] = I.
+ * @param p A vector of length 4. p[0] = probability of infection on contact.
+ * p[1] = recovery rate. p[2] = birth rate. p[3] = death rate.
  * @return Vec1 A vector of length 2 representing the derivative dx/dt such
  * that, dxdt[0] = dS/dt. dxdt[1] = dI/dt.
  */
