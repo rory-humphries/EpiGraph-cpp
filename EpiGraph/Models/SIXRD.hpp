@@ -129,9 +129,9 @@ auto sixrd_network_ode(const Mat1 &xmat, const Mat2 &adj, const Mat3 &params)
  * @param sixrd_params
  * @return DerivedA
  */
-template <IsMatrix Mat1, IsSparseOrDenseMatrix Mat2, IsVector Mat3>
+template <IsMatrix Mat1, IsSparseOrDenseMatrix Mat2, IsVector Vec1>
 auto sixrd_network_uniform_params_ode(const Mat1 &x, const Mat2 &adj,
-                                      const Mat3 &params) -> Mat1 {
+                                      const Vec1 &params) -> Mat1 {
 
   static_assert(
       std::is_base_of<Eigen::MatrixBase<Mat2>, Mat2>::value ||
@@ -190,10 +190,10 @@ auto sixrd_network_uniform_params_ode(const Mat1 &x, const Mat2 &adj,
  * @param params
  * @return Mat2
  */
-template <IsMatrix Mat1, IsSparseOrDenseMatrix Mat2, IsVector Mat3>
+template <IsMatrix Mat1, IsSparseOrDenseMatrix Mat2, IsVector Vec1>
 auto sixrd_network_uniform_params_next_gen_matrix(const Mat1 &xmat,
                                                   const Mat2 &adj,
-                                                  const Mat3 &params) -> Mat2 {
+                                                  const Vec1 &params) -> Mat2 {
 
   int dim = xmat.rows();
 
@@ -250,9 +250,9 @@ auto sixrd_network_uniform_params_next_gen_matrix(const Mat1 &xmat,
  * @param param
  * @return double
  */
-template <IsMatrix Mat1, IsSparseOrDenseMatrix Mat2, IsVector Mat3>
+template <IsMatrix Mat1, IsSparseOrDenseMatrix Mat2, IsVector Vec1>
 auto sixrd_network_uniform_params_r0(const Mat1 &xmat, const Mat2 &adj,
-                                     const Mat3 &params) -> double {
+                                     const Vec1 &params) -> double {
 
   Mat2 T = sixrd_next_gen_matrix(xmat, adj, params);
   return SpectralRadius(T);
