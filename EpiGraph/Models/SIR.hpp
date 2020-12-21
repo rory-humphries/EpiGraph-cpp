@@ -16,6 +16,8 @@ namespace EpiGraph {
  * Eigen::MatrixBase<Vec1>.
  * @tparam Vec2 A row or column vector which inherits form
  * Eigen::MatrixBase<Vec2>.
+ * @tparam Vec3 A row or column vector which inherits form
+ * Eigen::MatrixBase<Vec3>.
  * @param x A vector of length 3. x[0] = S. x[1] = I. x[2] = R.
  * @param dxdt A vector of length 3. dxdt[0] = dS/dt. dxdt[1] = dI/dt. dxdt[2] =
  * dR/dt.
