@@ -26,13 +26,31 @@ auto row_vector_assert(const Eigen::MatrixBase<Derived> &vec) -> void {
 }
 
 template <typename T>
-concept IsMatrix = std::is_base_of<Eigen::MatrixBase<T>, T>::value;
+concept IsEigen = std::is_base_of<Eigen::EigenBase<T>, T>::value;
 
 template <typename T>
-concept IsSparseMatrix = std::is_base_of<Eigen::SparseMatrixBase<T>, T>::value;
+concept IsDense = IsEigen<T> &&std::is_base_of<Eigen::DenseBase<T>, T>::value;
+
+template <typename T>
+concept IsArray = IsDense<T> &&std::is_base_of<Eigen::ArrayBase<T>, T>::value;
+
+template <typename T>
+concept IsMatrix = IsDense<T> &&std::is_base_of<Eigen::MatrixBase<T>, T>::value;
+
+template <typename T>
+concept IsSparseMatrix =
+    IsEigen<T> &&std::is_base_of<Eigen::SparseMatrixBase<T>, T>::value;
 
 template <typename T>
 concept IsSparseOrDenseMatrix = IsMatrix<T> || IsSparseMatrix<T>;
+
+template <typename T>
+concept IsTriangleMatrix =
+    IsEigen<T> &&std::is_base_of<Eigen::TriangularBase<T>, T>::value;
+
+template <typename T>
+concept IsDiagonalMatrix =
+    IsEigen<T> &&std::is_base_of<Eigen::DiagonalBase<T>, T>::value;
 
 template <typename T>
 concept IsColVector = IsMatrix<T> &&T::ColsAtCompileTime == 1;
