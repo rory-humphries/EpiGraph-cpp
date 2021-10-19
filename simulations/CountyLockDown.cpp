@@ -141,7 +141,7 @@ int main(int argc, char *argv[]) {
   double run_time = 0;
 
   // responsible for adding edges/travellers to the network
-  RandomMatrixGenerator rnd_travel(num_nodes);
+  RandomAdjMat rnd_travel(num_nodes);
   MatrixXd max_dist_mat =
       general_outer_product(cur_max_dist, cur_max_dist,
                             [](double a, double b) { return std::min(a, b); });
@@ -151,7 +151,7 @@ int main(int argc, char *argv[]) {
       travel_weights.array() *
           (1 -
            cur_compliance.rowwise().replicate(travel_weights.cols()).array()));
-  rnd_travel.set_row_distributions(new_travel_weights);
+  rnd_travel.set_distributions(new_travel_weights);
 
   MatrixXd state_history(
       std::accumulate(duration_list.begin(), duration_list.end(), 1), 6);
@@ -175,7 +175,7 @@ int main(int argc, char *argv[]) {
 
     // holds the adjacency matrix
     // Generate movements and store in adj matrix
-    x.set_coupling(rnd_travel.distribute_vec_over_matrix_rows(travel_pop));
+    x.set_coupling(rnd_travel.gen_sparse_mat(travel_pop));
 
     // Update the state_impl matrix
     x.set_state(x.state() + dXdt(x));
@@ -222,7 +222,7 @@ int main(int argc, char *argv[]) {
         travel_weights.array() * (1 - cur_compliance.rowwise()
                                           .replicate(travel_weights.cols())
                                           .array()));
-    rnd_travel.set_row_distributions(new_travel_weights);
+    rnd_travel.set_distributions(new_travel_weights);
 
     // Output to console
     auto comp_vec = x.state().colwise().sum();

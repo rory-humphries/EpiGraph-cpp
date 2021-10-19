@@ -17,12 +17,11 @@ import os
 ######################
 save_figs = True
 
-data_path = '../scenarios/12_mar_01_dec_hist_proj_after/'
+data_path = '../scenarios/comp_80/'
 
-output_name = '12_mar_01_dec_hist_proj_after'
+output_name = 'output'
 fig_name = output_name + '.png'
 data_name = output_name + '.csv'
-title = 'Historic Lockdown Scenario with 3rd Lockdown Projection'
 max_time = 600
 #####################
 

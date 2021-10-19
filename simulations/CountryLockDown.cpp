@@ -107,7 +107,7 @@ int main(int argc, char *argv[]) {
   MatrixXd distance_mat = distance_matrix<MatrixXd>(pos_mat);
 
   // responsible for adding edges/travellers to the network
-  RandomMatrixGenerator rnd_travel(num_nodes);
+  RandomAdjMat rnd_travel(num_nodes);
 
   // probability distribution for generating commuter numbers
   ProbDist commuter_dist = ProbDist_from_csv(commuter_distribution_path);
@@ -140,10 +140,32 @@ int main(int argc, char *argv[]) {
     double compliance = compliance_list[current_phase];
     int duration = duration_list[current_phase];
 
+    /*
+        new_travel_weights = travel_weights;
+        VectorXd tw_sum = travel_weights.rowwise().sum();
+
+        VectorXd tw_sum_lt = (distance_mat.array() < max_dist)
+                                 .select(travel_weights, 0)
+                                 .rowwise()
+                                 .sum();
+        VectorXd tw_sum_gt = (distance_mat.array() < max_dist)
+                                 .select(0, travel_weights)
+                                 .rowwise()
+                                 .sum();
+
+        for (int col = 0; col < travel_weights.cols(); col++) {
+          new_travel_weights.col(col) =
+              (distance_mat.col(col).array() < max_dist)
+                  .select(travel_weights.col(col).array(),
+                          (travel_weights.col(col).array() * (1 - compliance) *
+                           tw_sum_lt.array()) /
+                              (compliance * tw_sum_gt.array()));
+        }
+    */
     new_travel_weights =
         (distance_mat.array() < max_dist)
             .select(travel_weights, (1 - compliance) * travel_weights);
-    rnd_travel.set_row_distributions(new_travel_weights);
+    rnd_travel.set_distributions(new_travel_weights);
 
     for (int tau = 0; tau < duration; tau++, t++) {
       std::chrono::high_resolution_clock::time_point t1 =
@@ -156,40 +178,48 @@ int main(int argc, char *argv[]) {
       // holds the adjacency matrix
       // Generate movements and store in adj matrix
       // EigenUtil::SparseMatrix<double> adj(num_nodes, num_nodes);
-      x.set_coupling(rnd_travel.distribute_vec_over_matrix_rows(travel_pop));
+      x.set_coupling(rnd_travel.gen_sparse_mat(travel_pop));
+
       // Update the state_impl matrix
       x.set_state(x.state() + dXdt(x));
 
-      if (t == 1 || t == 60 || t == 125) {
+      /*
+            if (t == 1 || t == 60 || t == 164 || t == 185) {
 
-        std::ofstream myfile;
-        myfile.open(std::to_string(t) + ".txt");
-        for (int col = 0; col < num_nodes; col++) {
-          for (int row = 0; row < num_nodes; row++) {
-            for (int ll = 0; ll < x.coupling().coeff(row, col); ll++) {
-              double lon1 = pos_mat(row, 0), lon2 = pos_mat(col, 0),
-                     lat1 = pos_mat(row, 1), lat2 = pos_mat(col, 1);
-              myfile << long_lat_distance(lon1, lat1, lon2, lat2) << "\n";
+              std::ofstream myfile;
+              myfile.open(std::to_string(t) + ".txt");
+              for (int col = 0; col < num_nodes; col++) {
+                for (int row = 0; row < num_nodes; row++) {
+                  for (int ll = 0; ll < x.coupling().coeff(row, col); ll++) {
+                    double lon1 = pos_mat(row, 0), lon2 = pos_mat(col, 0),
+                           lat1 = pos_mat(row, 1), lat2 = pos_mat(col, 1);
+                    myfile << long_lat_distance(lon1, lat1, lon2, lat2) << "\n";
+                  }
+                }
+              }
+              myfile.close();
+
+              std::string tmps = std::to_string(t);
+              write_matrix(x.coupling().toDense(), "../trav_mat_" + tmps +
+         ".csv");
             }
-          }
-        }
-        myfile.close();
-      }
 
+      */
       // Output to file
       write_state(x, full_output_path + std::to_string(t) + ".csv",
                   "S,I,X,R,D,N");
 
       // MatrixXd NGM = next_gen_matrix(x);
       // MatrixXd new_NGM = MatrixXd::Zero(non_zero_pops.sum(),
-      // non_zero_pops.sum()); for (int j = num_nodes; j >= 0; j--) { 	if
-      //(!non_zero_pops[j]) { 		unsigned int numRows = NGM.rows();
-      //		unsigned int numCols = NGM.cols();
+      // non_zero_pops.sum()); for (int j = num_nodes; j >= 0; j--)
+      // { 	if
+      //(!non_zero_pops[j]) { 		unsigned int numRows =
+      // NGM.rows(); 		unsigned int numCols = NGM.cols();
 
       //		NGM.block(j,0,numRows-1-j,numCols) =
       // NGM.block(j+1,0,numRows-1-j,numCols);
       // NGM.block(0,j,numRows,numCols-1-j) =
-      //NGM.block(0,j+1,numRows,numCols-1-j);
+      // NGM.block(0,j+1,numRows,numCols-1-j);
       //		NGM.conservativeResize(numRows-1,numCols-1);
       //	}
       //}

@@ -15,45 +15,52 @@
 
 namespace EpiGraph {
 
-class RandomMatrixGenerator {
+/**
+ * @brief A container for managing a list of std::discrete_distributions<int>
+ * which all produce random integers in the same range with different
+ * probabilities.
+ *
+ */
+class RandomAdjMat {
 private:
   size_t dim;
-  std::vector<std::discrete_distribution<int>> m_row_distributions;
+  std::vector<std::discrete_distribution<int>> m_distributions_vector;
 
 public:
-  explicit RandomMatrixGenerator(size_t dim)
-      : dim(dim), m_row_distributions(dim) {}
+  RandomAdjMat() : dim(0), m_distributions_vector(0) {}
+
+  explicit RandomAdjMat(size_t dim) : dim(dim), m_distributions_vector(dim) {}
 
   template <typename TIter>
-  auto set_row_distribution(size_t i, TIter begin, TIter end) -> void {
-    // stores the probability distributions of a traveller going to a
-    // destination vertex given the traveller is leaving from vertex v_src. The
-    // index of the vector correspond to the vertices of the same index. i.e.
-    // vec[v_src]
-
+  auto set_distribution(size_t i, TIter begin, TIter end) -> void {
     if (std::distance(begin, end) != dim)
       throw std::invalid_argument(
           "Iterator length does not match dimension of model");
     if (i > dim)
       throw std::invalid_argument("Index greater than dimension of model");
 
-    m_row_distributions[i] = std::discrete_distribution<int>(begin, end);
+    m_distributions_vector[i] = std::discrete_distribution<int>(begin, end);
   }
 
   template <typename Derived>
-  auto set_row_distributions(const Eigen::DenseBase<Derived> &weights) -> void {
+  auto set_distributions(const Eigen::DenseBase<Derived> &weights) -> void {
     if (weights.cols() != dim)
       throw std::invalid_argument("Matrix cols do not match model dimension");
 
 #pragma omp parallel for
     for (int i = 0; i < weights.rows(); i++) {
       Eigen::RowVectorXd row = weights.row(i);
-      set_row_distribution(i, row.data(), row.data() + weights.cols());
+      set_distribution(i, row.data(), row.data() + weights.cols());
     }
   }
 
-  template <typename Mat2>
-  auto distribute_vec_over_matrix_rows(Eigen::MatrixBase<Mat2> &vals)
+  auto get_vector() const
+      -> const std::vector<std::discrete_distribution<int>> & {
+    return m_distributions_vector;
+  }
+
+  template <typename Derived>
+  auto gen_sparse_mat(Eigen::MatrixBase<Derived> &vals)
       -> Eigen::SparseMatrix<double> {
     /*
      * Add random edges to the network with a random number of travellers along
@@ -77,7 +84,7 @@ public:
 #pragma omp parallel for
     for (int i = 0; i < dim; i++) {
       std::discrete_distribution<int> &travel_distribution =
-          m_row_distributions[i];
+          m_distributions_vector[i];
       std::mt19937 &gen = gen_vec[omp_get_thread_num()];
 
       std::vector<Eigen::Triplet<double>> p_vec;
@@ -97,6 +104,7 @@ public:
     return adj;
   }
 };
+
 } // namespace EpiGraph
 
 #endif // EPIGRAPH_RANDOM_MATRIX_H

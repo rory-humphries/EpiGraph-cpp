@@ -8,7 +8,9 @@
 
 using namespace Eigen;
 
-int main(int argc, char *argv[]) {
+int
+main(int argc, char* argv[])
+{
   try {
     std::string config_path;
 
@@ -27,23 +29,23 @@ int main(int argc, char *argv[]) {
     const auto config = toml::parse(config_path);
 
     // input file paths
-    const auto &file_paths = toml::find(config, "file_paths");
+    const auto& file_paths = toml::find(config, "file_paths");
     const std::string travel_weights_path =
-        toml::find<std::string>(file_paths, "travel_distribution");
+      toml::find<std::string>(file_paths, "travel_distribution");
     const std::string commuter_distribution_path =
-        toml::find<std::string>(file_paths, "commuter_distribution");
+      toml::find<std::string>(file_paths, "commuter_distribution");
     const std::string node_long_lat_path =
-        toml::find<std::string>(file_paths, "node_long_lat");
+      toml::find<std::string>(file_paths, "node_long_lat");
     const std::string node_population_path =
-        toml::find<std::string>(file_paths, "node_population");
+      toml::find<std::string>(file_paths, "node_population");
     const std::string node_county_path =
-        toml::find<std::string>(file_paths, "node_county");
+      toml::find<std::string>(file_paths, "node_county");
 
     // output file paths
     std::string agg_output_path =
-        toml::find<std::string>(config, "output", "aggregate_path");
+      toml::find<std::string>(config, "output", "aggregate_path");
     std::string full_output_path =
-        toml::find<std::string>(config, "output", "full_path");
+      toml::find<std::string>(config, "output", "full_path");
     std::string R0_path = toml::find<std::string>(config, "output", "R0_path");
 
     // containers to hold the network data
@@ -79,8 +81,8 @@ int main(int argc, char *argv[]) {
 
     // Add initial infections
     auto rand_verts =
-        toml::find<std::vector<int>>(config, "parameters", "initial_seed");
-    for (auto &rand_v : rand_verts)
+      toml::find<std::vector<int>>(config, "parameters", "initial_seed");
+    for (auto& rand_v : rand_verts)
       infect_SIXRD_state(x, rand_v, 2);
 
     // Write initial conditions
@@ -92,8 +94,8 @@ int main(int argc, char *argv[]) {
     int max_t = toml::find<int>(config, "parameters", "max_t");
     int max_I = toml::find<int>(config, "parameters", "max_I");
 
-    const auto &phase_order =
-        toml::find<std::vector<std::string>>(config, "parameters", "order");
+    const auto& phase_order =
+      toml::find<std::vector<std::string>>(config, "parameters", "order");
     for (int current_phase_idx = 0; current_phase_idx < phase_order.size();
          current_phase_idx++) {
 
@@ -101,8 +103,8 @@ int main(int argc, char *argv[]) {
         break;
 
       auto current_phase = phase_order[current_phase_idx];
-      const auto &phase_params =
-          toml::find(config, "parameters", current_phase);
+      const auto& phase_params =
+        toml::find(config, "parameters", current_phase);
 
       Eigen::Matrix<double, 5, 1> sixrd_param(5, 1);
 
@@ -116,23 +118,23 @@ int main(int argc, char *argv[]) {
       double compliance = toml::find<double>(phase_params, "compliance");
 
       MatrixXd new_travel_weights =
-          (distance_mat.array() < max_dist)
-              .select(travel_weights, (1 - compliance) * travel_weights);
-      rnd_travel.set_row_distribution(travel_weights);
+        (distance_mat.array() < max_dist)
+          .select(travel_weights, (1 - compliance) * travel_weights);
+      rnd_travel.set_distribution(travel_weights);
 
       int duration = toml::find<int>(phase_params, "duration");
       for (int tau = 0; tau < duration; tau++, t++) {
 
         std::chrono::high_resolution_clock::time_point t1 =
-            std::chrono::high_resolution_clock::now();
+          std::chrono::high_resolution_clock::now();
 
         // Compute number of travellers from each node
         VectorXd travel_pop = pop.unaryExpr(
-            [&](double x) { return x * commuter_dist(global_engine()); });
+          [&](double x) { return x * commuter_dist(global_engine()); });
 
         Eigen::SparseMatrix<double> adj(x.rows(), x.rows());
         // Generate movements and store in adj matrix
-        rnd_travel.distribute_vec_over_matrix_rows(adj, travel_pop);
+        rnd_travel.gen_sparse_mat(adj, travel_pop);
 
         // Update the state matrix
         net_SIXRD_ode(x, adj, sixrd_param);
@@ -148,9 +150,9 @@ int main(int argc, char *argv[]) {
 
         // Output to console
         std::chrono::high_resolution_clock::time_point t2 =
-            std::chrono::high_resolution_clock::now();
+          std::chrono::high_resolution_clock::now();
         auto time_span =
-            std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
+          std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
         run_time += time_span.count();
         std::cout << "#################################\n";
         std::cout << "Time step : " << t << "\n";
@@ -169,7 +171,7 @@ int main(int argc, char *argv[]) {
     }
 
     std::cout << "Finished!" << std::endl;
-  } catch (const std::exception &e) {
+  } catch (const std::exception& e) {
     std::cerr << e.what();
     return -1;
   }

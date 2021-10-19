@@ -21,14 +21,14 @@ from shapely import wkt
 ######################
 save_figs = True
 
-data_path = '../scenarios/max_1400/'
+data_path = '../data/output/'
 
-output_name = 'county_lockdown_1400_I'
+output_name = 'county_lockdown_comp_100'
 fig_name = output_name + '.png'
 data_name = output_name + '.csv'
 title = 'County Level Lockdown'
 
-max_time = 599
+max_time = 600
 #####################
 
 
@@ -86,13 +86,13 @@ for county in counties:
     # fig, ax = plt.subplots(1, 1, figsize = (16/3, 9/3))
     # plt.plot(dates, s, label = 'S', c = 'tab:purple')
     if county == "DUBLIN":
-        plt.plot(dates, i, '-', c = 'tab:blue', label=county)
+        l1=plt.plot(dates, i, '-', c = 'tab:blue', label=county)
     elif county == "CORK":
-        plt.plot(dates, i, '-', c = 'tab:green', label=county)
+        l2=plt.plot(dates, i, '-', c = 'tab:green', label=county)
     elif county == "ANTRIM":
-        plt.plot(dates, i, '-', c = 'tab:orange', label=county)
+        l3=plt.plot(dates, i, '-', c = 'tab:orange', label=county)
     elif county == "DOWN":
-        plt.plot(dates, i, '-', c = 'darkorchid', label=county)
+        l4=plt.plot(dates, i, '-', c = 'darkorchid', label=county)
     else:
         plt.plot(dates, i, 'r-', alpha=0.2)
     # plt.plot(dates, r, label = 'R', c = 'tab:orange')
@@ -130,8 +130,11 @@ plt.xlabel('Time [months]')
 plt.ylabel('No. of individuals')
 
 # plt.yscale('log')
-# plt.ylim(1,10000)
-plt.legend(loc=1)
+plt.ylim(0,3500)
+handles, labels = ax.get_legend_handles_labels()
+ax.legend([handles[2], handles[0], handles[1], handles[3]], 
+          [labels[2], labels[0], labels[1], labels[3]],
+          loc=1)
 
 if save_figs == True:
     plt.savefig(fig_name, bbox_inches='tight', dpi=300)

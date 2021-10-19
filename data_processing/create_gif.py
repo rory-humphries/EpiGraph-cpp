@@ -28,14 +28,15 @@ import imageio
 from shapely import wkt
 
 #######################################
-data_path = '../output/'
-gif_name = 'output.gif'
+data_path = '../data/output/MinImpactLDZones/'
+gif_name = 'output3.gif'
 
-cmap = 'RdYlGn_r'
+cmap = 'viridis'
 max_time = 500
-cb_axis_title = 'No. of infected per county'
+cb_axis_title = 'No. of infected per zone'
 
 agg_by_county = True
+agg_by_zone= False
 per_area = False
 output_gif = True
 #######################################
@@ -55,8 +56,15 @@ ed_soa_gdf = ed_soa_gdf.to_crs('epsg:29902')
 
 ed_soa_gdf['area'] = ed_soa_gdf.area/1000
 
+
+
 if agg_by_county:
     ed_soa_gdf['area'] = ed_soa_gdf.groupby('county')['area'].transform(sum)
+    
+if agg_by_zone:
+    df = pd.read_csv("../data/processed/ed_soa_commuting_zone.csv")
+    ed_soa_gdf['zone'] = df
+    ed_soa_gdf['area'] = ed_soa_gdf.groupby('zone')['area'].transform(sum)
 
 
 # get max values
@@ -82,13 +90,16 @@ for filename in tqdm(range(1, min(max_time, len(files)))):
     if agg_by_county:
         ed_soa_gdf['I'] = ed_soa_gdf.groupby('county')['I'].transform(sum)
         
+    if agg_by_zone:
+        ed_soa_gdf['I'] = ed_soa_gdf.groupby('zone')['I'].transform(sum)
+        
     if per_area:
         ed_soa_gdf['I'] /= ed_soa_gdf['area']
     
     
     
-    #lognorm = matplotlib.colors.LogNorm(1, maxi)
-    lognorm = matplotlib.colors.Normalize(0, 200)
+    #lognorm = matplotlib.colors.LogNorm(0.0000001, ed_soa_gdf['I'].max())
+    lognorm = matplotlib.colors.Normalize(0, ed_soa_gdf['I'].max())
 
 
     #ax2=ed_soa_gdf.plot(ax=ax, linewidth=0.0001, column = 'I', cmap = plt.get_cmap('YlOrRd', len(bounds)), norm=lognorm, legend = False)
@@ -106,11 +117,11 @@ for filename in tqdm(range(1, min(max_time, len(files)))):
     if output_gif:
         plt.savefig('tmp.png')
         images.append(imageio.imread("tmp.png"))
-    #plt.show()
+    plt.show()
     plt.close(fig)
     
 if output_gif:
-    imageio.mimsave('output.gif', images[0:499])
+    imageio.mimsave('output3.gif', images[0:499])
 
 
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+ #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Thu Nov 12 23:59:41 2020
@@ -19,15 +19,14 @@ import geopandas as gpd
 from shapely import wkt
 
 #######################################
-data_path = '../scenarios/12_mar_01_dec_hist_proj_after/'
-output_name = '12_mar_01_dec_hist_proj_after_map1'
+data_path = '../data/output/MinImpactLDZones/'
 
 cmap = 'viridis'
-time = 50+15+52+21+21#+21+21+21+45+47+45+47
+time = 160
 cb_axis_title = r'No. of infected per km$^2$'
 
 agg_by_county = False
-per_area = True
+per_area = False
 #######################################
 
 files = []
@@ -64,7 +63,7 @@ if per_area:
     ed_soa_gdf['I'] /= ed_soa_gdf['area']
 
 
-#max_i = max(ed_soa_gdf.I)
+max_i = max(ed_soa_gdf.I)
 lognorm = matplotlib.colors.LogNorm(0.000001, max_i)
 #lognorm = matplotlib.colors.Normalize(0, 200)
 
@@ -82,7 +81,7 @@ plt.axis('off')
 plt.axis('equal')
 plt.tight_layout()
 
-plt.savefig(output_name)
+plt.savefig('output')
 
 
 

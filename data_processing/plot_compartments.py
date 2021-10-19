@@ -26,13 +26,13 @@ import os
 ######################
 save_figs = True
 
-data_path = '../scenarios/doomsday_r0.csv'
+data_path = '../data/output/MinImpactLDZones.csv'
 
 output_name = 'doomsday_r0_1'
 fig_name = output_name + '.png'
 data_name = output_name + '.csv'
 title = '5 phase and 6 week lockdown'
-max_time = 500
+max_time = 600
 #####################
 
 data = pd.read_csv(data_path, index_col=False)
@@ -49,7 +49,7 @@ dates = [start_date + datetime.timedelta(days=k) for k in range(max_time)]
 #ax = plt.subplots(1, 1, figsize = (16/3, 9/3))
 fig, ax = plt.subplots(1, 1, figsize = (15/2.5, 9/2.5))
 #l1=plt.plot(dates, data.S[:max_time], label = 'S', c = 'tab:purple')
-l2=plt.plot(dates, data.I[:max_time], label = 'I', c = 'tab:blue')
+l2=plt.plot(dates, data[:max_time], label = 'I', c = 'tab:blue')
 #l3=plt.plot(dates, data.R[:max_time], label = 'R', c = 'tab:orange')
 #l4=plt.plot(dates, data.D[:max_time], label = 'D', c = 'tab:red')
 #l5=plt.plot(dates, data.X[:max_time], label = 'X', c = 'tab:green')
@@ -82,6 +82,7 @@ plt.setp(ax.xaxis.get_minorticklabels(), rotation=45)
 #plt.title(title)
 plt.xlabel('Time [months]')
 plt.ylabel('No. of individuals')
+plt.savefig('countytravels.png')
 
 plt.ylim(1, data.S[:max_time].max() + 5000000)
 plt.yscale('log')
